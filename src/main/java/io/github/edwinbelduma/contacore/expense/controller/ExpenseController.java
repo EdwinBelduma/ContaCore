@@ -101,6 +101,7 @@ public class ExpenseController {
                 request
         );
     }
+
     @PostMapping("/{expenseId}/post")
     public ExpenseResponse post(
             @PathVariable UUID entityId,
@@ -113,6 +114,24 @@ public class ExpenseController {
                 .id();
 
         return expenseService.post(
+                entityId,
+                expenseId,
+                ownerId
+        );
+    }
+
+    @PostMapping("/{expenseId}/void")
+    public ExpenseResponse voidExpense(
+            @PathVariable UUID entityId,
+            @PathVariable UUID expenseId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+
+        UUID ownerId = authService
+                .getCurrentUser(jwt)
+                .id();
+
+        return expenseService.voidExpense(
                 entityId,
                 expenseId,
                 ownerId
