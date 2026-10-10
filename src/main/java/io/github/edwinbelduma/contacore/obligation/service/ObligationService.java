@@ -122,6 +122,7 @@ public class ObligationService {
         return toResponse(saved);
     }
 
+    @Transactional
     public List<ObligationResponse> findAll(
             UUID entityId,
             UUID ownerId
@@ -129,15 +130,21 @@ public class ObligationService {
 
         getAccountingEntity(entityId, ownerId);
 
-        return obligationRepository
-                .findByAccountingEntity_IdOrderByDueDateAscCreatedAtDesc(
-                        entityId
-                )
+        List<Obligation> obligations =
+                obligationRepository
+                        .findByAccountingEntity_IdOrderByDueDateAscCreatedAtDesc(
+                                entityId
+                        );
+
+        obligations.forEach(Obligation::refreshStatus);
+
+        return obligations
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
+    @Transactional
     public ObligationResponse findById(
             UUID entityId,
             UUID obligationId,
@@ -151,6 +158,8 @@ public class ObligationService {
                         entityId,
                         obligationId
                 );
+
+        obligation.refreshStatus();
 
         return toResponse(obligation);
     }
@@ -170,6 +179,8 @@ public class ObligationService {
                         entityId,
                         obligationId
                 );
+
+        obligation.refreshStatus();
 
         if (obligation.getStatus() != ObligationStatus.PENDING) {
             throw new ResponseStatusException(
@@ -265,6 +276,8 @@ public class ObligationService {
                         entityId,
                         obligationId
                 );
+
+        obligation.refreshStatus();
 
         if (obligation.getStatus() == ObligationStatus.VOIDED) {
             throw new ResponseStatusException(

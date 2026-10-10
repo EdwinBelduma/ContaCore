@@ -75,7 +75,8 @@ public class Obligation extends BaseEntity {
         this.reference = reference;
         this.totalAmount = totalAmount;
         this.paidAmount = BigDecimal.ZERO;
-        this.status = ObligationStatus.PENDING;
+
+        updatePaymentStatus();
     }
 
     public void update(
@@ -94,6 +95,8 @@ public class Obligation extends BaseEntity {
         this.description = description;
         this.reference = reference;
         this.totalAmount = totalAmount;
+
+        updatePaymentStatus();
     }
 
     public void registerPayment(BigDecimal amount) {
@@ -140,28 +143,37 @@ public class Obligation extends BaseEntity {
         updatePaymentStatus();
     }
 
-    private void updatePaymentStatus() {
+    public void refreshStatus() {
 
-        if (this.paidAmount.compareTo(BigDecimal.ZERO) == 0) {
-
-            this.status = ObligationStatus.PENDING;
-
-        } else if (this.paidAmount.compareTo(this.totalAmount) < 0) {
-
-            this.status = ObligationStatus.PARTIALLY_PAID;
-
-        } else {
-
-            this.status = ObligationStatus.PAID;
+        if (status == ObligationStatus.VOIDED) {
+            return;
         }
+
+        updatePaymentStatus();
     }
 
-    public void markOverdue() {
+    private void updatePaymentStatus() {
 
-        if (status == ObligationStatus.PENDING
-                || status == ObligationStatus.PARTIALLY_PAID) {
+        if (this.status == ObligationStatus.VOIDED) {
+            return;
+        }
+
+        if (this.paidAmount.compareTo(this.totalAmount) == 0) {
+            this.status = ObligationStatus.PAID;
+            return;
+        }
+
+        if (this.dueDate != null
+                && this.dueDate.isBefore(LocalDate.now())) {
 
             this.status = ObligationStatus.OVERDUE;
+            return;
+        }
+
+        if (this.paidAmount.compareTo(BigDecimal.ZERO) > 0) {
+            this.status = ObligationStatus.PARTIALLY_PAID;
+        } else {
+            this.status = ObligationStatus.PENDING;
         }
     }
 

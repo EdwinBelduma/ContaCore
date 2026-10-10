@@ -10,6 +10,7 @@ import io.github.edwinbelduma.contacore.accountingentity.domain.AccountingEntity
 import io.github.edwinbelduma.contacore.accountingentity.repository.AccountingEntityRepository;
 import io.github.edwinbelduma.contacore.obligation.domain.Obligation;
 import io.github.edwinbelduma.contacore.obligation.domain.ObligationPayment;
+import io.github.edwinbelduma.contacore.obligation.domain.ObligationPaymentStatus;
 import io.github.edwinbelduma.contacore.obligation.domain.ObligationStatus;
 import io.github.edwinbelduma.contacore.obligation.domain.ObligationType;
 import io.github.edwinbelduma.contacore.obligation.dto.ObligationPaymentResponse;
@@ -242,17 +243,57 @@ public class ObligationPaymentService {
         getObligation(entityId, obligationId);
 
         ObligationPayment payment =
-                paymentRepository
-                        .findByIdAndObligation_Id(
-                                paymentId,
-                                obligationId
-                        )
-                        .orElseThrow(() ->
-                                new ResponseStatusException(
-                                        HttpStatus.NOT_FOUND,
-                                        "Pago no encontrado"
-                                )
-                        );
+                getPayment(
+                        obligationId,
+                        paymentId
+                );
+
+        return toResponse(payment);
+    }
+
+    @Transactional
+    public ObligationPaymentResponse voidPayment(
+            UUID entityId,
+            UUID obligationId,
+            UUID paymentId,
+            UUID ownerId
+    ) {
+
+        getAccountingEntity(entityId, ownerId);
+
+        Obligation obligation =
+                getObligation(
+                        entityId,
+                        obligationId
+                );
+
+        ObligationPayment payment =
+                getPayment(
+                        obligationId,
+                        paymentId
+                );
+
+        if (payment.getStatus() == ObligationPaymentStatus.VOIDED) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "El pago ya está anulado"
+            );
+        }
+
+        if (payment.getJournalEntry() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "El pago no tiene un asiento contable asociado"
+            );
+        }
+
+        payment.getJournalEntry().voidEntry();
+
+        payment.voidPayment();
+
+        obligation.reversePayment(
+                payment.getAmount()
+        );
 
         return toResponse(payment);
     }
@@ -289,6 +330,24 @@ public class ObligationPaymentService {
                         new ResponseStatusException(
                                 HttpStatus.NOT_FOUND,
                                 "Obligación no encontrada"
+                        )
+                );
+    }
+
+    private ObligationPayment getPayment(
+            UUID obligationId,
+            UUID paymentId
+    ) {
+
+        return paymentRepository
+                .findByIdAndObligation_Id(
+                        paymentId,
+                        obligationId
+                )
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Pago no encontrado"
                         )
                 );
     }
@@ -342,9 +401,7 @@ public class ObligationPaymentService {
             );
         }
 
-        if (cashAccount.getId()
-                .equals(obligationAccount.getId())) {
-
+        if (cashAccount.getId().equals(obligationAccount.getId())) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "La cuenta de efectivo y la cuenta de la obligación deben ser diferentes"
