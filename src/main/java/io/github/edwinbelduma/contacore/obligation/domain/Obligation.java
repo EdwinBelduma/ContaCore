@@ -115,10 +115,44 @@ public class Obligation extends BaseEntity {
 
         this.paidAmount = newPaidAmount;
 
-        if (this.paidAmount.compareTo(this.totalAmount) == 0) {
-            this.status = ObligationStatus.PAID;
-        } else {
+        updatePaymentStatus();
+    }
+
+    public void reversePayment(BigDecimal amount) {
+
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException(
+                    "El valor a revertir debe ser mayor que cero"
+            );
+        }
+
+        BigDecimal newPaidAmount =
+                this.paidAmount.subtract(amount);
+
+        if (newPaidAmount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException(
+                    "El monto pagado no puede quedar en negativo"
+            );
+        }
+
+        this.paidAmount = newPaidAmount;
+
+        updatePaymentStatus();
+    }
+
+    private void updatePaymentStatus() {
+
+        if (this.paidAmount.compareTo(BigDecimal.ZERO) == 0) {
+
+            this.status = ObligationStatus.PENDING;
+
+        } else if (this.paidAmount.compareTo(this.totalAmount) < 0) {
+
             this.status = ObligationStatus.PARTIALLY_PAID;
+
+        } else {
+
+            this.status = ObligationStatus.PAID;
         }
     }
 
