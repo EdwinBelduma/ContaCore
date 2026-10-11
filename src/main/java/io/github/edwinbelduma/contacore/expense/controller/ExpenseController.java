@@ -1,16 +1,19 @@
 package io.github.edwinbelduma.contacore.expense.controller;
 
 import io.github.edwinbelduma.contacore.auth.service.AuthService;
+import io.github.edwinbelduma.contacore.expense.domain.ExpenseStatus;
 import io.github.edwinbelduma.contacore.expense.dto.CreateExpenseRequest;
 import io.github.edwinbelduma.contacore.expense.dto.ExpenseResponse;
 import io.github.edwinbelduma.contacore.expense.dto.UpdateExpenseRequest;
 import io.github.edwinbelduma.contacore.expense.service.ExpenseService;
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -51,16 +54,26 @@ public class ExpenseController {
     @GetMapping
     public List<ExpenseResponse> findAll(
             @PathVariable UUID entityId,
-            @AuthenticationPrincipal Jwt jwt
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) ExpenseStatus status,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate from,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate to
     ) {
 
         UUID ownerId = authService
                 .getCurrentUser(jwt)
                 .id();
 
-        return expenseService.findAll(
+        return expenseService.search(
                 entityId,
-                ownerId
+                ownerId,
+                status,
+                from,
+                to
         );
     }
 

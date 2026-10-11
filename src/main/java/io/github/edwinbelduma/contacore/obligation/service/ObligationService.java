@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -51,7 +51,10 @@ public class ObligationService {
     ) {
 
         AccountingEntity accountingEntity =
-                getAccountingEntity(entityId, ownerId);
+                getAccountingEntity(
+                        entityId,
+                        ownerId
+                );
 
         validateDates(
                 request.issueDate(),
@@ -66,14 +69,14 @@ public class ObligationService {
             if (request.customerId() == null) {
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,
-                        "Una obligación RECEIVABLE requiere un cliente"
+                        "Una obligación por cobrar debe tener un cliente"
                 );
             }
 
             if (request.supplierId() != null) {
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,
-                        "Una obligación RECEIVABLE no puede tener proveedor"
+                        "Una obligación por cobrar no puede tener proveedor"
                 );
             }
 
@@ -87,14 +90,14 @@ public class ObligationService {
             if (request.supplierId() == null) {
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,
-                        "Una obligación PAYABLE requiere un proveedor"
+                        "Una obligación por pagar debe tener un proveedor"
                 );
             }
 
             if (request.customerId() != null) {
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,
-                        "Una obligación PAYABLE no puede tener cliente"
+                        "Una obligación por pagar no puede tener cliente"
                 );
             }
 
@@ -104,17 +107,18 @@ public class ObligationService {
             );
         }
 
-        Obligation obligation = new Obligation(
-                accountingEntity,
-                request.type(),
-                customer,
-                supplier,
-                request.issueDate(),
-                request.dueDate(),
-                request.description().trim(),
-                normalize(request.reference()),
-                request.totalAmount()
-        );
+        Obligation obligation =
+                new Obligation(
+                        accountingEntity,
+                        request.type(),
+                        customer,
+                        supplier,
+                        request.issueDate(),
+                        request.dueDate(),
+                        request.description().trim(),
+                        normalize(request.reference()),
+                        request.totalAmount()
+                );
 
         Obligation saved =
                 obligationRepository.save(obligation);
@@ -128,18 +132,59 @@ public class ObligationService {
             UUID ownerId
     ) {
 
-        getAccountingEntity(entityId, ownerId);
+        return search(
+                entityId,
+                ownerId,
+                null,
+                null,
+                null,
+                null
+        );
+    }
+
+    @Transactional
+    public List<ObligationResponse> search(
+            UUID entityId,
+            UUID ownerId,
+            ObligationType type,
+            ObligationStatus status,
+            LocalDate dueFrom,
+            LocalDate dueTo
+    ) {
+
+        getAccountingEntity(
+                entityId,
+                ownerId
+        );
+
+        if (dueFrom != null
+                && dueTo != null
+                && dueFrom.isAfter(dueTo)) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La fecha inicial de vencimiento no puede ser posterior a la fecha final"
+            );
+        }
 
         List<Obligation> obligations =
-                obligationRepository
-                        .findByAccountingEntity_IdOrderByDueDateAscCreatedAtDesc(
-                                entityId
-                        );
+                obligationRepository.search(
+                        entityId,
+                        type,
+                        dueFrom,
+                        dueTo
+                );
 
-        obligations.forEach(Obligation::refreshStatus);
+        obligations.forEach(
+                Obligation::refreshStatus
+        );
 
         return obligations
                 .stream()
+                .filter(obligation ->
+                        status == null
+                                || obligation.getStatus() == status
+                )
                 .map(this::toResponse)
                 .toList();
     }
@@ -151,7 +196,10 @@ public class ObligationService {
             UUID ownerId
     ) {
 
-        getAccountingEntity(entityId, ownerId);
+        getAccountingEntity(
+                entityId,
+                ownerId
+        );
 
         Obligation obligation =
                 getObligation(
@@ -172,7 +220,10 @@ public class ObligationService {
             UpdateObligationRequest request
     ) {
 
-        getAccountingEntity(entityId, ownerId);
+        getAccountingEntity(
+                entityId,
+                ownerId
+        );
 
         Obligation obligation =
                 getObligation(
@@ -189,9 +240,7 @@ public class ObligationService {
             );
         }
 
-        if (obligation.getPaidAmount()
-                .compareTo(BigDecimal.ZERO) > 0) {
-
+        if (obligation.getPaidAmount().signum() > 0) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "No se puede modificar una obligación que ya tiene pagos"
@@ -211,14 +260,14 @@ public class ObligationService {
             if (request.customerId() == null) {
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,
-                        "Una obligación RECEIVABLE requiere un cliente"
+                        "Una obligación por cobrar debe tener un cliente"
                 );
             }
 
             if (request.supplierId() != null) {
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,
-                        "Una obligación RECEIVABLE no puede tener proveedor"
+                        "Una obligación por cobrar no puede tener proveedor"
                 );
             }
 
@@ -227,19 +276,19 @@ public class ObligationService {
                     request.customerId()
             );
 
-        } else {
+        } else if (obligation.getType() == ObligationType.PAYABLE) {
 
             if (request.supplierId() == null) {
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,
-                        "Una obligación PAYABLE requiere un proveedor"
+                        "Una obligación por pagar debe tener un proveedor"
                 );
             }
 
             if (request.customerId() != null) {
                 throw new ResponseStatusException(
                         HttpStatus.BAD_REQUEST,
-                        "Una obligación PAYABLE no puede tener cliente"
+                        "Una obligación por pagar no puede tener cliente"
                 );
             }
 
@@ -259,6 +308,8 @@ public class ObligationService {
                 request.totalAmount()
         );
 
+        obligation.refreshStatus();
+
         return toResponse(obligation);
     }
 
@@ -269,7 +320,10 @@ public class ObligationService {
             UUID ownerId
     ) {
 
-        getAccountingEntity(entityId, ownerId);
+        getAccountingEntity(
+                entityId,
+                ownerId
+        );
 
         Obligation obligation =
                 getObligation(
@@ -287,7 +341,7 @@ public class ObligationService {
         }
 
         if (obligation.getStatus() == ObligationStatus.PAID
-                || obligation.getPaidAmount().compareTo(BigDecimal.ZERO) > 0) {
+                || obligation.getPaidAmount().signum() > 0) {
 
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
@@ -373,9 +427,16 @@ public class ObligationService {
     }
 
     private void validateDates(
-            java.time.LocalDate issueDate,
-            java.time.LocalDate dueDate
+            LocalDate issueDate,
+            LocalDate dueDate
     ) {
+
+        if (issueDate == null || dueDate == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Las fechas de emisión y vencimiento son obligatorias"
+            );
+        }
 
         if (dueDate.isBefore(issueDate)) {
             throw new ResponseStatusException(
@@ -424,7 +485,8 @@ public class ObligationService {
             return null;
         }
 
-        String normalized = value.trim();
+        String normalized =
+                value.trim();
 
         return normalized.isEmpty()
                 ? null

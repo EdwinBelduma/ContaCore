@@ -1,16 +1,19 @@
 package io.github.edwinbelduma.contacore.income.controller;
 
 import io.github.edwinbelduma.contacore.auth.service.AuthService;
+import io.github.edwinbelduma.contacore.income.domain.IncomeStatus;
 import io.github.edwinbelduma.contacore.income.dto.CreateIncomeRequest;
 import io.github.edwinbelduma.contacore.income.dto.IncomeResponse;
 import io.github.edwinbelduma.contacore.income.dto.UpdateIncomeRequest;
 import io.github.edwinbelduma.contacore.income.service.IncomeService;
 import jakarta.validation.Valid;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -51,16 +54,26 @@ public class IncomeController {
     @GetMapping
     public List<IncomeResponse> findAll(
             @PathVariable UUID entityId,
-            @AuthenticationPrincipal Jwt jwt
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) IncomeStatus status,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate from,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate to
     ) {
 
         UUID ownerId = authService
                 .getCurrentUser(jwt)
                 .id();
 
-        return incomeService.findAll(
+        return incomeService.search(
                 entityId,
-                ownerId
+                ownerId,
+                status,
+                from,
+                to
         );
     }
 

@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -109,11 +110,44 @@ public class ExpenseService {
             UUID ownerId
     ) {
 
-        getAccountingEntity(entityId, ownerId);
+        return search(
+                entityId,
+                ownerId,
+                null,
+                null,
+                null
+        );
+    }
+
+    public List<ExpenseResponse> search(
+            UUID entityId,
+            UUID ownerId,
+            ExpenseStatus status,
+            LocalDate from,
+            LocalDate to
+    ) {
+
+        getAccountingEntity(
+                entityId,
+                ownerId
+        );
+
+        if (from != null
+                && to != null
+                && from.isAfter(to)) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La fecha inicial no puede ser posterior a la fecha final"
+            );
+        }
 
         return expenseRepository
-                .findByAccountingEntity_IdOrderByExpenseDateDescCreatedAtDesc(
-                        entityId
+                .search(
+                        entityId,
+                        status,
+                        from,
+                        to
                 )
                 .stream()
                 .map(this::toResponse)
