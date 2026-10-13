@@ -1,5 +1,7 @@
 package io.github.edwinbelduma.contacore.obligation.domain;
 
+import io.github.edwinbelduma.contacore.accounting.account.domain.Account;
+import io.github.edwinbelduma.contacore.accounting.journal.domain.JournalEntry;
 import io.github.edwinbelduma.contacore.accountingentity.domain.AccountingEntity;
 import io.github.edwinbelduma.contacore.customer.domain.Customer;
 import io.github.edwinbelduma.contacore.shared.domain.BaseEntity;
@@ -41,19 +43,54 @@ public class Obligation extends BaseEntity {
     @Column(length = 100)
     private String reference;
 
-    @Column(name = "total_amount", nullable = false, precision = 19, scale = 2)
+    @Column(
+            name = "total_amount",
+            nullable = false,
+            precision = 19,
+            scale = 2
+    )
     private BigDecimal totalAmount;
 
-    @Column(name = "paid_amount", nullable = false, precision = 19, scale = 2)
+    @Column(
+            name = "paid_amount",
+            nullable = false,
+            precision = 19,
+            scale = 2
+    )
     private BigDecimal paidAmount;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
     private ObligationStatus status;
 
+    /*
+     * Estas columnas se dejan nullable por ahora porque ya existen
+     * obligaciones antiguas en la base de datos que no tienen
+     * información contable de origen.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "obligation_account_id")
+    private Account obligationAccount;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "counterpart_account_id")
+    private Account counterpartAccount;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+            name = "journal_entry_id",
+            unique = true
+    )
+    private JournalEntry journalEntry;
+
     protected Obligation() {
     }
 
+    /*
+     * Constructor antiguo.
+     * Lo conservamos temporalmente para que el código existente
+     * siga compilando mientras actualizamos ObligationService.
+     */
     public Obligation(
             AccountingEntity accountingEntity,
             ObligationType type,
@@ -79,6 +116,39 @@ public class Obligation extends BaseEntity {
         updatePaymentStatus();
     }
 
+    /*
+     * Constructor nuevo para las obligaciones que sí tendrán
+     * integración contable completa.
+     */
+    public Obligation(
+            AccountingEntity accountingEntity,
+            ObligationType type,
+            Customer customer,
+            Supplier supplier,
+            LocalDate issueDate,
+            LocalDate dueDate,
+            String description,
+            String reference,
+            BigDecimal totalAmount,
+            Account obligationAccount,
+            Account counterpartAccount
+    ) {
+        this.accountingEntity = accountingEntity;
+        this.type = type;
+        this.customer = customer;
+        this.supplier = supplier;
+        this.issueDate = issueDate;
+        this.dueDate = dueDate;
+        this.description = description;
+        this.reference = reference;
+        this.totalAmount = totalAmount;
+        this.paidAmount = BigDecimal.ZERO;
+        this.obligationAccount = obligationAccount;
+        this.counterpartAccount = counterpartAccount;
+
+        updatePaymentStatus();
+    }
+
     public void update(
             Customer customer,
             Supplier supplier,
@@ -99,9 +169,30 @@ public class Obligation extends BaseEntity {
         updatePaymentStatus();
     }
 
+    public void attachJournalEntry(
+            JournalEntry journalEntry
+    ) {
+
+        if (journalEntry == null) {
+            throw new IllegalArgumentException(
+                    "El asiento contable no puede ser nulo"
+            );
+        }
+
+        if (this.journalEntry != null) {
+            throw new IllegalStateException(
+                    "La obligación ya tiene un asiento contable asociado"
+            );
+        }
+
+        this.journalEntry = journalEntry;
+    }
+
     public void registerPayment(BigDecimal amount) {
 
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+        if (amount == null
+                || amount.compareTo(BigDecimal.ZERO) <= 0) {
+
             throw new IllegalArgumentException(
                     "El valor del pago debe ser mayor que cero"
             );
@@ -123,7 +214,9 @@ public class Obligation extends BaseEntity {
 
     public void reversePayment(BigDecimal amount) {
 
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+        if (amount == null
+                || amount.compareTo(BigDecimal.ZERO) <= 0) {
+
             throw new IllegalArgumentException(
                     "El valor a revertir debe ser mayor que cero"
             );
@@ -227,5 +320,17 @@ public class Obligation extends BaseEntity {
 
     public ObligationStatus getStatus() {
         return status;
+    }
+
+    public Account getObligationAccount() {
+        return obligationAccount;
+    }
+
+    public Account getCounterpartAccount() {
+        return counterpartAccount;
+    }
+
+    public JournalEntry getJournalEntry() {
+        return journalEntry;
     }
 }

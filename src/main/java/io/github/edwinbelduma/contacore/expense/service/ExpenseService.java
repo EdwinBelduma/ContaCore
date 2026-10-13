@@ -143,13 +143,22 @@ public class ExpenseService {
         }
 
         return expenseRepository
-                .search(
-                        entityId,
-                        status,
-                        from,
-                        to
+                .findByAccountingEntity_IdOrderByExpenseDateDescCreatedAtDesc(
+                        entityId
                 )
                 .stream()
+                .filter(expense ->
+                        status == null
+                                || expense.getStatus() == status
+                )
+                .filter(expense ->
+                        from == null
+                                || !expense.getExpenseDate().isBefore(from)
+                )
+                .filter(expense ->
+                        to == null
+                                || !expense.getExpenseDate().isAfter(to)
+                )
                 .map(this::toResponse)
                 .toList();
     }

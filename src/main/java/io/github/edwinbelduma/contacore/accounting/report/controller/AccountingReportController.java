@@ -14,6 +14,7 @@ import io.github.edwinbelduma.contacore.accounting.report.service.TrialBalanceRe
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,6 +30,14 @@ import java.util.UUID;
 @RequestMapping(
         "/api/accounting-entities/{entityId}/reports"
 )
+@PreAuthorize("""
+        hasAnyRole(
+            'ADMIN',
+            'MANAGER',
+            'ACCOUNTANT',
+            'AUDITOR'
+        )
+        """)
 public class AccountingReportController {
 
     private final JournalReportService journalReportService;

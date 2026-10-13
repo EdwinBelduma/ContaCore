@@ -9,6 +9,7 @@ import io.github.edwinbelduma.contacore.expense.service.ExpenseService;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -34,6 +35,14 @@ public class ExpenseController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT'
+            )
+            """)
     public ExpenseResponse create(
             @PathVariable UUID entityId,
             @AuthenticationPrincipal Jwt jwt,
@@ -52,6 +61,15 @@ public class ExpenseController {
     }
 
     @GetMapping
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT',
+                'AUDITOR'
+            )
+            """)
     public List<ExpenseResponse> findAll(
             @PathVariable UUID entityId,
             @AuthenticationPrincipal Jwt jwt,
@@ -78,6 +96,15 @@ public class ExpenseController {
     }
 
     @GetMapping("/{expenseId}")
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT',
+                'AUDITOR'
+            )
+            """)
     public ExpenseResponse findById(
             @PathVariable UUID entityId,
             @PathVariable UUID expenseId,
@@ -96,6 +123,14 @@ public class ExpenseController {
     }
 
     @PutMapping("/{expenseId}")
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT'
+            )
+            """)
     public ExpenseResponse update(
             @PathVariable UUID entityId,
             @PathVariable UUID expenseId,
@@ -116,6 +151,13 @@ public class ExpenseController {
     }
 
     @PostMapping("/{expenseId}/post")
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT'
+            )
+            """)
     public ExpenseResponse post(
             @PathVariable UUID entityId,
             @PathVariable UUID expenseId,
@@ -134,6 +176,13 @@ public class ExpenseController {
     }
 
     @PostMapping("/{expenseId}/void")
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT'
+            )
+            """)
     public ExpenseResponse voidExpense(
             @PathVariable UUID entityId,
             @PathVariable UUID expenseId,

@@ -1,5 +1,11 @@
 package io.github.edwinbelduma.contacore.obligation.service;
 
+import io.github.edwinbelduma.contacore.accounting.account.domain.Account;
+import io.github.edwinbelduma.contacore.accounting.account.domain.AccountType;
+import io.github.edwinbelduma.contacore.accounting.account.repository.AccountRepository;
+import io.github.edwinbelduma.contacore.accounting.journal.domain.JournalEntry;
+import io.github.edwinbelduma.contacore.accounting.journal.domain.JournalEntryLine;
+import io.github.edwinbelduma.contacore.accounting.journal.repository.JournalEntryRepository;
 import io.github.edwinbelduma.contacore.accountingentity.domain.AccountingEntity;
 import io.github.edwinbelduma.contacore.accountingentity.repository.AccountingEntityRepository;
 import io.github.edwinbelduma.contacore.customer.domain.Customer;
@@ -13,11 +19,14 @@ import io.github.edwinbelduma.contacore.obligation.dto.UpdateObligationRequest;
 import io.github.edwinbelduma.contacore.obligation.repository.ObligationRepository;
 import io.github.edwinbelduma.contacore.supplier.domain.Supplier;
 import io.github.edwinbelduma.contacore.supplier.repository.SupplierRepository;
+import io.github.edwinbelduma.contacore.user.domain.User;
+import io.github.edwinbelduma.contacore.user.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -30,17 +39,26 @@ public class ObligationService {
     private final AccountingEntityRepository accountingEntityRepository;
     private final CustomerRepository customerRepository;
     private final SupplierRepository supplierRepository;
+    private final AccountRepository accountRepository;
+    private final JournalEntryRepository journalEntryRepository;
+    private final UserRepository userRepository;
 
     public ObligationService(
             ObligationRepository obligationRepository,
             AccountingEntityRepository accountingEntityRepository,
             CustomerRepository customerRepository,
-            SupplierRepository supplierRepository
+            SupplierRepository supplierRepository,
+            AccountRepository accountRepository,
+            JournalEntryRepository journalEntryRepository,
+            UserRepository userRepository
     ) {
         this.obligationRepository = obligationRepository;
         this.accountingEntityRepository = accountingEntityRepository;
         this.customerRepository = customerRepository;
         this.supplierRepository = supplierRepository;
+        this.accountRepository = accountRepository;
+        this.journalEntryRepository = journalEntryRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -107,6 +125,95 @@ public class ObligationService {
             );
         }
 
+        Account obligationAccount =
+                getAccount(
+                        entityId,
+                        request.obligationAccountId()
+                );
+
+        Account counterpartAccount =
+                getAccount(
+                        entityId,
+                        request.counterpartAccountId()
+                );
+
+        validateAccountingAccounts(
+                request.type(),
+                obligationAccount,
+                counterpartAccount
+        );
+
+        User user = userRepository
+                .findById(ownerId)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Usuario no encontrado"
+                        )
+                );
+
+        JournalEntry journalEntry =
+                new JournalEntry(
+                        accountingEntity,
+                        request.issueDate(),
+                        "Reconocimiento de obligación - "
+                                + request.description().trim(),
+                        normalize(request.reference()),
+                        user
+                );
+
+        JournalEntryLine debitLine;
+        JournalEntryLine creditLine;
+
+        if (request.type() == ObligationType.PAYABLE) {
+
+            debitLine = new JournalEntryLine(
+                    journalEntry,
+                    counterpartAccount,
+                    1,
+                    request.description().trim(),
+                    request.totalAmount(),
+                    BigDecimal.ZERO
+            );
+
+            creditLine = new JournalEntryLine(
+                    journalEntry,
+                    obligationAccount,
+                    2,
+                    request.description().trim(),
+                    BigDecimal.ZERO,
+                    request.totalAmount()
+            );
+
+        } else {
+
+            debitLine = new JournalEntryLine(
+                    journalEntry,
+                    obligationAccount,
+                    1,
+                    request.description().trim(),
+                    request.totalAmount(),
+                    BigDecimal.ZERO
+            );
+
+            creditLine = new JournalEntryLine(
+                    journalEntry,
+                    counterpartAccount,
+                    2,
+                    request.description().trim(),
+                    BigDecimal.ZERO,
+                    request.totalAmount()
+            );
+        }
+
+        journalEntry.addLine(debitLine);
+        journalEntry.addLine(creditLine);
+
+        journalEntry.post();
+
+        JournalEntry savedJournalEntry =
+                journalEntryRepository.save(journalEntry);
+
         Obligation obligation =
                 new Obligation(
                         accountingEntity,
@@ -117,8 +224,14 @@ public class ObligationService {
                         request.dueDate(),
                         request.description().trim(),
                         normalize(request.reference()),
-                        request.totalAmount()
+                        request.totalAmount(),
+                        obligationAccount,
+                        counterpartAccount
                 );
+
+        obligation.attachJournalEntry(
+                savedJournalEntry
+        );
 
         Obligation saved =
                 obligationRepository.save(obligation);
@@ -247,6 +360,13 @@ public class ObligationService {
             );
         }
 
+        if (obligation.getJournalEntry() != null) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "La obligación ya fue reconocida contablemente y no puede modificarse directamente"
+            );
+        }
+
         validateDates(
                 request.issueDate(),
                 request.dueDate()
@@ -349,6 +469,11 @@ public class ObligationService {
             );
         }
 
+        if (obligation.getJournalEntry() != null) {
+            obligation.getJournalEntry()
+                    .voidEntry();
+        }
+
         obligation.voidObligation();
 
         return toResponse(obligation);
@@ -426,6 +551,83 @@ public class ObligationService {
                 );
     }
 
+    private Account getAccount(
+            UUID entityId,
+            UUID accountId
+    ) {
+
+        return accountRepository
+                .findByIdAndAccountingEntity_IdAndActiveTrue(
+                        accountId,
+                        entityId
+                )
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Cuenta contable no encontrada"
+                        )
+                );
+    }
+
+    private void validateAccountingAccounts(
+            ObligationType type,
+            Account obligationAccount,
+            Account counterpartAccount
+    ) {
+
+        if (obligationAccount.getId()
+                .equals(counterpartAccount.getId())) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "La cuenta de obligación y la cuenta contrapartida deben ser diferentes"
+            );
+        }
+
+        if (type == ObligationType.PAYABLE) {
+
+            if (obligationAccount.getType()
+                    != AccountType.LIABILITY) {
+
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Una obligación por pagar debe utilizar una cuenta de tipo LIABILITY"
+                );
+            }
+
+            if (counterpartAccount.getType()
+                    != AccountType.EXPENSE
+                    && counterpartAccount.getType()
+                    != AccountType.ASSET) {
+
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "La contrapartida de una obligación por pagar debe ser una cuenta EXPENSE o ASSET"
+                );
+            }
+
+        } else if (type == ObligationType.RECEIVABLE) {
+
+            if (obligationAccount.getType()
+                    != AccountType.ASSET) {
+
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Una obligación por cobrar debe utilizar una cuenta de tipo ASSET"
+                );
+            }
+
+            if (counterpartAccount.getType()
+                    != AccountType.INCOME) {
+
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "La contrapartida de una obligación por cobrar debe ser una cuenta de tipo INCOME"
+                );
+            }
+        }
+    }
+
     private void validateDates(
             LocalDate issueDate,
             LocalDate dueDate
@@ -460,6 +662,21 @@ public class ObligationService {
                         ? obligation.getSupplier().getId()
                         : null;
 
+        UUID obligationAccountId =
+                obligation.getObligationAccount() != null
+                        ? obligation.getObligationAccount().getId()
+                        : null;
+
+        UUID counterpartAccountId =
+                obligation.getCounterpartAccount() != null
+                        ? obligation.getCounterpartAccount().getId()
+                        : null;
+
+        UUID journalEntryId =
+                obligation.getJournalEntry() != null
+                        ? obligation.getJournalEntry().getId()
+                        : null;
+
         return new ObligationResponse(
                 obligation.getId(),
                 obligation.getAccountingEntity().getId(),
@@ -473,7 +690,10 @@ public class ObligationService {
                 obligation.getTotalAmount(),
                 obligation.getPaidAmount(),
                 obligation.getOutstandingAmount(),
-                obligation.getStatus()
+                obligation.getStatus(),
+                obligationAccountId,
+                counterpartAccountId,
+                journalEntryId
         );
     }
 

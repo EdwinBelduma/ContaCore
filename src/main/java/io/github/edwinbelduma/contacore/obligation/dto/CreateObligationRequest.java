@@ -38,6 +38,12 @@ public record CreateObligationRequest(
         )
         String reference,
 
+        @NotNull(message = "La cuenta de obligación es obligatoria")
+        UUID obligationAccountId,
+
+        @NotNull(message = "La cuenta contrapartida es obligatoria")
+        UUID counterpartAccountId,
+
         @NotNull(message = "El valor total es obligatorio")
         @DecimalMin(
                 value = "0.01",

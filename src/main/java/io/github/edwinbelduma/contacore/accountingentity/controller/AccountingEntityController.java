@@ -1,5 +1,4 @@
 package io.github.edwinbelduma.contacore.accountingentity.controller;
-
 import io.github.edwinbelduma.contacore.accountingentity.dto.AccountingEntityResponse;
 import io.github.edwinbelduma.contacore.accountingentity.dto.CreateAccountingEntityRequest;
 import io.github.edwinbelduma.contacore.accountingentity.dto.UpdateAccountingEntityRequest;
@@ -7,16 +6,10 @@ import io.github.edwinbelduma.contacore.accountingentity.service.AccountingEntit
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
@@ -35,6 +28,7 @@ public class AccountingEntityController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<AccountingEntityResponse> create(
             @AuthenticationPrincipal Jwt jwt,
             @Valid
@@ -53,6 +47,15 @@ public class AccountingEntityController {
     }
 
     @GetMapping
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT',
+                'AUDITOR'
+            )
+            """)
     public ResponseEntity<List<AccountingEntityResponse>> findAll(
             @AuthenticationPrincipal Jwt jwt
     ) {
@@ -64,6 +67,15 @@ public class AccountingEntityController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT',
+                'AUDITOR'
+            )
+            """)
     public ResponseEntity<AccountingEntityResponse> findById(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID id
@@ -78,6 +90,7 @@ public class AccountingEntityController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<AccountingEntityResponse> update(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID id,
@@ -96,6 +109,7 @@ public class AccountingEntityController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER')")
     public ResponseEntity<Void> deactivate(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID id
@@ -106,6 +120,8 @@ public class AccountingEntityController {
                 id
         );
 
-        return ResponseEntity.noContent().build();
+        return ResponseEntity
+                .noContent()
+                .build();
     }
 }

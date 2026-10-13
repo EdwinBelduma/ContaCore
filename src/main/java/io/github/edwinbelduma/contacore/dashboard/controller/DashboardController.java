@@ -4,6 +4,7 @@ import io.github.edwinbelduma.contacore.auth.service.AuthService;
 import io.github.edwinbelduma.contacore.dashboard.dto.DashboardRecentMovementResponse;
 import io.github.edwinbelduma.contacore.dashboard.dto.DashboardSummaryResponse;
 import io.github.edwinbelduma.contacore.dashboard.service.DashboardService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +28,15 @@ public class DashboardController {
     }
 
     @GetMapping("/summary")
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT',
+                'AUDITOR'
+            )
+            """)
     public DashboardSummaryResponse getSummary(
             @PathVariable UUID entityId,
             @AuthenticationPrincipal Jwt jwt
@@ -43,6 +53,15 @@ public class DashboardController {
     }
 
     @GetMapping("/recent-movements")
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT',
+                'AUDITOR'
+            )
+            """)
     public List<DashboardRecentMovementResponse> getRecentMovements(
             @PathVariable UUID entityId,
             @AuthenticationPrincipal Jwt jwt

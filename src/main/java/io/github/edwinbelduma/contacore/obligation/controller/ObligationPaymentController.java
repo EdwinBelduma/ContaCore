@@ -6,6 +6,7 @@ import io.github.edwinbelduma.contacore.obligation.dto.RegisterObligationPayment
 import io.github.edwinbelduma.contacore.obligation.service.ObligationPaymentService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -32,6 +33,13 @@ public class ObligationPaymentController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT'
+            )
+            """)
     public ObligationPaymentResponse registerPayment(
             @PathVariable UUID entityId,
             @PathVariable UUID obligationId,
@@ -52,6 +60,15 @@ public class ObligationPaymentController {
     }
 
     @GetMapping
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT',
+                'AUDITOR'
+            )
+            """)
     public List<ObligationPaymentResponse> findAll(
             @PathVariable UUID entityId,
             @PathVariable UUID obligationId,
@@ -70,6 +87,15 @@ public class ObligationPaymentController {
     }
 
     @GetMapping("/{paymentId}")
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT',
+                'AUDITOR'
+            )
+            """)
     public ObligationPaymentResponse findById(
             @PathVariable UUID entityId,
             @PathVariable UUID obligationId,
@@ -90,6 +116,13 @@ public class ObligationPaymentController {
     }
 
     @PostMapping("/{paymentId}/void")
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT'
+            )
+            """)
     public ObligationPaymentResponse voidPayment(
             @PathVariable UUID entityId,
             @PathVariable UUID obligationId,

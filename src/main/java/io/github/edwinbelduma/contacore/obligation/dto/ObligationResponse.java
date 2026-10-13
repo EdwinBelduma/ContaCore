@@ -10,30 +10,21 @@ import java.util.UUID;
 public record ObligationResponse(
 
         UUID id,
-
         UUID accountingEntityId,
-
         ObligationType type,
-
         UUID customerId,
-
         UUID supplierId,
-
         LocalDate issueDate,
-
         LocalDate dueDate,
-
         String description,
-
         String reference,
-
         BigDecimal totalAmount,
-
         BigDecimal paidAmount,
-
         BigDecimal outstandingAmount,
-
-        ObligationStatus status
+        ObligationStatus status,
+        UUID obligationAccountId,
+        UUID counterpartAccountId,
+        UUID journalEntryId
 
 ) {
 }

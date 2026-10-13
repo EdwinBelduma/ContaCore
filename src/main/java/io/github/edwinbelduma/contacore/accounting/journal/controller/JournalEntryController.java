@@ -6,6 +6,7 @@ import io.github.edwinbelduma.contacore.accounting.journal.service.JournalEntryS
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,6 +35,14 @@ public class JournalEntryController {
     }
 
     @PostMapping
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT'
+            )
+            """)
     public ResponseEntity<JournalEntryResponse> create(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID entityId,
@@ -54,6 +63,15 @@ public class JournalEntryController {
     }
 
     @GetMapping
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT',
+                'AUDITOR'
+            )
+            """)
     public ResponseEntity<List<JournalEntryResponse>> findAll(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID entityId
@@ -68,6 +86,15 @@ public class JournalEntryController {
     }
 
     @GetMapping("/{entryId}")
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT',
+                'AUDITOR'
+            )
+            """)
     public ResponseEntity<JournalEntryResponse> findById(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID entityId,

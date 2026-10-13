@@ -1,4 +1,3 @@
-
 package io.github.edwinbelduma.contacore.supplier.controller;
 
 import io.github.edwinbelduma.contacore.auth.service.AuthService;
@@ -8,8 +7,9 @@ import io.github.edwinbelduma.contacore.supplier.dto.UpdateSupplierRequest;
 import io.github.edwinbelduma.contacore.supplier.service.SupplierService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,6 +32,14 @@ public class SupplierController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT'
+            )
+            """)
     public SupplierResponse create(
             @PathVariable UUID entityId,
             @AuthenticationPrincipal Jwt jwt,
@@ -49,6 +57,15 @@ public class SupplierController {
     }
 
     @GetMapping
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT',
+                'AUDITOR'
+            )
+            """)
     public List<SupplierResponse> findAll(
             @PathVariable UUID entityId,
             @AuthenticationPrincipal Jwt jwt
@@ -64,6 +81,15 @@ public class SupplierController {
     }
 
     @GetMapping("/{supplierId}")
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT',
+                'AUDITOR'
+            )
+            """)
     public SupplierResponse findById(
             @PathVariable UUID entityId,
             @PathVariable UUID supplierId,
@@ -81,6 +107,14 @@ public class SupplierController {
     }
 
     @PutMapping("/{supplierId}")
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT'
+            )
+            """)
     public SupplierResponse update(
             @PathVariable UUID entityId,
             @PathVariable UUID supplierId,
@@ -101,6 +135,12 @@ public class SupplierController {
 
     @DeleteMapping("/{supplierId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER'
+            )
+            """)
     public void deactivate(
             @PathVariable UUID entityId,
             @PathVariable UUID supplierId,

@@ -7,16 +7,10 @@ import io.github.edwinbelduma.contacore.accounting.account.service.AccountServic
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
@@ -36,6 +30,13 @@ public class AccountController {
     }
 
     @PostMapping
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT'
+            )
+            """)
     public ResponseEntity<AccountResponse> create(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID entityId,
@@ -55,6 +56,15 @@ public class AccountController {
     }
 
     @GetMapping
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT',
+                'AUDITOR'
+            )
+            """)
     public ResponseEntity<List<AccountResponse>> findAll(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID entityId
@@ -69,6 +79,15 @@ public class AccountController {
     }
 
     @GetMapping("/{accountId}")
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT',
+                'ASSISTANT',
+                'AUDITOR'
+            )
+            """)
     public ResponseEntity<AccountResponse> findById(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID entityId,
@@ -85,6 +104,13 @@ public class AccountController {
     }
 
     @PutMapping("/{accountId}")
+    @PreAuthorize("""
+            hasAnyRole(
+                'ADMIN',
+                'MANAGER',
+                'ACCOUNTANT'
+            )
+            """)
     public ResponseEntity<AccountResponse> update(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID entityId,
@@ -104,6 +130,7 @@ public class AccountController {
     }
 
     @DeleteMapping("/{accountId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deactivate(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID entityId,
