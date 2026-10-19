@@ -2,6 +2,8 @@ package io.github.edwinbelduma.contacore.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -18,6 +20,9 @@ import java.time.LocalDateTime;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private static final Logger logger =
+            LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiErrorResponse> handleResponseStatusException(
             ResponseStatusException exception,
@@ -26,9 +31,12 @@ public class GlobalExceptionHandler {
 
         int status = exception.getStatusCode().value();
 
-        String error = HttpStatus
-                .valueOf(status)
-                .getReasonPhrase();
+        HttpStatus httpStatus =
+                HttpStatus.resolve(status);
+
+        String error = httpStatus != null
+                ? httpStatus.getReasonPhrase()
+                : "HTTP " + status;
 
         String message = exception.getReason() != null
                 ? exception.getReason()
@@ -212,6 +220,13 @@ public class GlobalExceptionHandler {
             Exception exception,
             HttpServletRequest request
     ) {
+
+        logger.error(
+                "Error inesperado procesando {} {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                exception
+        );
 
         ApiErrorResponse response =
                 new ApiErrorResponse(

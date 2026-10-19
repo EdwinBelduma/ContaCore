@@ -96,4 +96,22 @@ public interface JournalEntryLineRepository
             @Param("status") JournalEntryStatus status,
             @Param("asOf") LocalDate asOf
     );
+
+    @Query("""
+            SELECT line
+            FROM JournalEntryLine line
+            JOIN FETCH line.journalEntry entry
+            JOIN FETCH line.account account
+            WHERE entry.accountingEntity.id = :entityId
+              AND entry.status = :status
+            ORDER BY
+                account.code ASC,
+                entry.entryDate ASC,
+                entry.createdAt ASC,
+                line.lineNumber ASC
+            """)
+    List<JournalEntryLine> findAllByEntityAndStatus(
+            @Param("entityId") UUID entityId,
+            @Param("status") JournalEntryStatus status
+    );
 }

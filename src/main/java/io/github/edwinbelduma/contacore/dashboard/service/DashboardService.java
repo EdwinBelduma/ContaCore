@@ -1,5 +1,9 @@
 package io.github.edwinbelduma.contacore.dashboard.service;
 
+import io.github.edwinbelduma.contacore.accounting.account.domain.AccountType;
+import io.github.edwinbelduma.contacore.accounting.journal.domain.JournalEntryLine;
+import io.github.edwinbelduma.contacore.accounting.journal.domain.JournalEntryStatus;
+import io.github.edwinbelduma.contacore.accounting.journal.repository.JournalEntryLineRepository;
 import io.github.edwinbelduma.contacore.accountingentity.repository.AccountingEntityRepository;
 import io.github.edwinbelduma.contacore.dashboard.dto.DashboardRecentMovementResponse;
 import io.github.edwinbelduma.contacore.dashboard.dto.DashboardSummaryResponse;
@@ -30,17 +34,20 @@ public class DashboardService {
     private final IncomeRepository incomeRepository;
     private final ExpenseRepository expenseRepository;
     private final ObligationRepository obligationRepository;
+    private final JournalEntryLineRepository journalEntryLineRepository;
 
     public DashboardService(
             AccountingEntityRepository accountingEntityRepository,
             IncomeRepository incomeRepository,
             ExpenseRepository expenseRepository,
-            ObligationRepository obligationRepository
+            ObligationRepository obligationRepository,
+            JournalEntryLineRepository journalEntryLineRepository
     ) {
         this.accountingEntityRepository = accountingEntityRepository;
         this.incomeRepository = incomeRepository;
         this.expenseRepository = expenseRepository;
         this.obligationRepository = obligationRepository;
+        this.journalEntryLineRepository = journalEntryLineRepository;
     }
 
     @Transactional
@@ -54,27 +61,40 @@ public class DashboardService {
                 ownerId
         );
 
-        BigDecimal totalIncome =
-                incomeRepository
-                        .findByAccountingEntity_IdAndStatusOrderByIncomeDateDescCreatedAtDesc(
+        List<JournalEntryLine> accountingLines =
+                journalEntryLineRepository
+                        .findAllByEntityAndStatus(
                                 entityId,
-                                IncomeStatus.POSTED
-                        )
+                                JournalEntryStatus.POSTED
+                        );
+
+        BigDecimal totalIncome =
+                accountingLines
                         .stream()
-                        .map(income -> income.getAmount())
+                        .filter(line ->
+                                line.getAccount().getType()
+                                        == AccountType.INCOME
+                        )
+                        .map(line ->
+                                line.getCredit()
+                                        .subtract(line.getDebit())
+                        )
                         .reduce(
                                 BigDecimal.ZERO,
                                 BigDecimal::add
                         );
 
         BigDecimal totalExpenses =
-                expenseRepository
-                        .findByAccountingEntity_IdAndStatusOrderByExpenseDateDescCreatedAtDesc(
-                                entityId,
-                                ExpenseStatus.POSTED
-                        )
+                accountingLines
                         .stream()
-                        .map(expense -> expense.getAmount())
+                        .filter(line ->
+                                line.getAccount().getType()
+                                        == AccountType.EXPENSE
+                        )
+                        .map(line ->
+                                line.getDebit()
+                                        .subtract(line.getCredit())
+                        )
                         .reduce(
                                 BigDecimal.ZERO,
                                 BigDecimal::add
