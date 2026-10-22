@@ -9,6 +9,11 @@ export interface LoginResponse {
     accessToken: string
 }
 
+export interface CurrentUserResponse {
+    email: string
+    roles: string[]
+}
+
 export async function login(
     credentials: LoginRequest,
 ): Promise<LoginResponse> {
@@ -16,6 +21,15 @@ export async function login(
         '/auth/login',
         credentials,
     )
+
+    return response.data
+}
+
+export async function getCurrentUser(): Promise<CurrentUserResponse> {
+    const response =
+        await api.get<CurrentUserResponse>(
+            '/auth/me',
+        )
 
     return response.data
 }
