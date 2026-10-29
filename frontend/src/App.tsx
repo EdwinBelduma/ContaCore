@@ -1,20 +1,30 @@
+import type {
+    ReactNode,
+} from 'react'
+
 import {
     Navigate,
     Route,
     Routes,
 } from 'react-router-dom'
 
+import AppLayout from './layouts/AppLayout'
+
 import DashboardPage from './pages/DashboardPage'
+import ExpensesPage from './pages/ExpensesPage'
 import IncomesPage from './pages/IncomesPage'
 import LoginPage from './pages/LoginPage'
+import NewIncomePage from './pages/NewIncomePage'
 
 function ProtectedRoute({
                             children,
                         }: {
-    children: React.ReactNode
+    children: ReactNode
 }) {
     const token =
-        localStorage.getItem('accessToken')
+        localStorage.getItem(
+            'accessToken',
+        )
 
     if (!token) {
         return (
@@ -30,7 +40,9 @@ function ProtectedRoute({
 
 function HomeRedirect() {
     const token =
-        localStorage.getItem('accessToken')
+        localStorage.getItem(
+            'accessToken',
+        )
 
     return (
         <Navigate
@@ -48,33 +60,67 @@ function App() {
     return (
         <Routes>
 
+            {/* INICIO */}
+
             <Route
                 path="/"
                 element={<HomeRedirect />}
             />
+
+            {/* LOGIN */}
 
             <Route
                 path="/login"
                 element={<LoginPage />}
             />
 
-            <Route
-                path="/dashboard"
-                element={
-                    <ProtectedRoute>
-                        <DashboardPage />
-                    </ProtectedRoute>
-                }
-            />
+            {/* PÁGINAS PROTEGIDAS CON MENÚ LATERAL */}
 
             <Route
-                path="/ingresos"
                 element={
                     <ProtectedRoute>
-                        <IncomesPage />
+                        <AppLayout />
                     </ProtectedRoute>
                 }
-            />
+            >
+
+                {/* DASHBOARD */}
+
+                <Route
+                    path="/dashboard"
+                    element={
+                        <DashboardPage />
+                    }
+                />
+
+                {/* INGRESOS */}
+
+                <Route
+                    path="/ingresos"
+                    element={
+                        <IncomesPage />
+                    }
+                />
+
+                <Route
+                    path="/ingresos/nuevo"
+                    element={
+                        <NewIncomePage />
+                    }
+                />
+
+                {/* GASTOS */}
+
+                <Route
+                    path="/gastos"
+                    element={
+                        <ExpensesPage />
+                    }
+                />
+
+            </Route>
+
+            {/* CUALQUIER OTRA RUTA */}
 
             <Route
                 path="*"
