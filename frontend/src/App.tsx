@@ -10,10 +10,12 @@ import {
 
 import AppLayout from './layouts/AppLayout'
 
+import CustomersPage from './pages/CustomersPage'
 import DashboardPage from './pages/DashboardPage'
 import ExpensesPage from './pages/ExpensesPage'
 import IncomesPage from './pages/IncomesPage'
 import LoginPage from './pages/LoginPage'
+import NewExpensePage from './pages/NewExpensePage'
 import NewIncomePage from './pages/NewIncomePage'
 
 function ProtectedRoute({
@@ -115,6 +117,22 @@ function App() {
                     path="/gastos"
                     element={
                         <ExpensesPage />
+                    }
+                />
+
+                <Route
+                    path="/gastos/nuevo"
+                    element={
+                        <NewExpensePage />
+                    }
+                />
+
+                {/* CLIENTES */}
+
+                <Route
+                    path="/clientes"
+                    element={
+                        <CustomersPage />
                     }
                 />
 

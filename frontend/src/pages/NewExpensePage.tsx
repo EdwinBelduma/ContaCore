@@ -158,7 +158,7 @@ function NewExpensePage() {
                     setError('')
 
                     /*
-                     * 1. Entidad contable
+                     * 1. ENTIDAD CONTABLE
                      */
 
                     const entities =
@@ -187,8 +187,7 @@ function NewExpensePage() {
                     )
 
                     /*
-                     * 2. Proveedores
-                     * y cuentas
+                     * 2. PROVEEDORES Y CUENTAS
                      */
 
                     const [
@@ -521,9 +520,11 @@ function NewExpensePage() {
                             <div className="flex items-center gap-3">
 
                                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10 text-rose-400">
+
                                     <ReceiptText
                                         size={20}
                                     />
+
                                 </div>
 
                                 <div>
@@ -662,10 +663,13 @@ function NewExpensePage() {
                                 <div className="md:col-span-2">
 
                                     <label className="mb-2 block text-sm font-semibold text-slate-300">
+
                                         Referencia
+
                                         <span className="ml-2 text-xs font-normal text-slate-500">
                       Opcional
                     </span>
+
                                     </label>
 
                                     <input
@@ -699,9 +703,11 @@ function NewExpensePage() {
                             <div className="flex items-center gap-3">
 
                                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-400">
+
                                     <Store
                                         size={20}
                                     />
+
                                 </div>
 
                                 <div>
@@ -721,10 +727,13 @@ function NewExpensePage() {
                             <div className="mt-6">
 
                                 <label className="mb-2 block text-sm font-semibold text-slate-300">
+
                                     Proveedor
+
                                     <span className="ml-2 text-xs font-normal text-slate-500">
                     Opcional
                   </span>
+
                                 </label>
 
                                 <select
@@ -779,16 +788,18 @@ function NewExpensePage() {
 
                         </article>
 
-                        {/* CUENTAS CONTABLES */}
+                        {/* CONTABILIZACIÓN */}
 
                         <article className="rounded-2xl border border-slate-800 bg-[#071329] p-6">
 
                             <div className="flex items-center gap-3">
 
                                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400">
+
                                     <WalletCards
                                         size={20}
                                     />
+
                                 </div>
 
                                 <div>
@@ -1020,11 +1031,15 @@ function NewExpensePage() {
                             </p>
 
                             <p className="mt-3 text-sm leading-6 text-slate-400">
+
                                 Después podrás utilizar la acción
+
                                 <span className="font-semibold text-emerald-400">
                   {' '}Contabilizar{' '}
                 </span>
+
                                 desde la pantalla de Gastos.
+
                             </p>
 
                         </article>
