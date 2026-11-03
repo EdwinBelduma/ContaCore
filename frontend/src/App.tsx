@@ -10,13 +10,19 @@ import {
 
 import AppLayout from './layouts/AppLayout'
 
+import CustomerDetailPage from './pages/CustomerDetailPage'
 import CustomersPage from './pages/CustomersPage'
 import DashboardPage from './pages/DashboardPage'
+import EditCustomerPage from './pages/EditCustomerPage'
 import ExpensesPage from './pages/ExpensesPage'
 import IncomesPage from './pages/IncomesPage'
 import LoginPage from './pages/LoginPage'
+import NewCustomerPage from './pages/NewCustomerPage'
 import NewExpensePage from './pages/NewExpensePage'
 import NewIncomePage from './pages/NewIncomePage'
+import NewSupplierPage from './pages/NewSupplierPage'
+import SuppliersPage from './pages/SuppliersPage'
+import SupplierDetailPage from './pages/SupplierDetailPage'
 
 function ProtectedRoute({
                             children,
@@ -66,17 +72,21 @@ function App() {
 
             <Route
                 path="/"
-                element={<HomeRedirect />}
+                element={
+                    <HomeRedirect />
+                }
             />
 
             {/* LOGIN */}
 
             <Route
                 path="/login"
-                element={<LoginPage />}
+                element={
+                    <LoginPage />
+                }
             />
 
-            {/* PÁGINAS PROTEGIDAS CON MENÚ LATERAL */}
+            {/* PÁGINAS PROTEGIDAS */}
 
             <Route
                 element={
@@ -136,13 +146,58 @@ function App() {
                     }
                 />
 
+                <Route
+                    path="/clientes/nuevo"
+                    element={
+                        <NewCustomerPage />
+                    }
+                />
+
+                <Route
+                    path="/clientes/:customerId"
+                    element={
+                        <CustomerDetailPage />
+                    }
+                />
+
+                <Route
+                    path="/clientes/:customerId/editar"
+                    element={
+                        <EditCustomerPage />
+                    }
+                />
+
+                {/* PROVEEDORES */}
+
+                <Route
+                    path="/proveedores"
+                    element={
+                        <SuppliersPage />
+                    }
+                />
+
+                <Route
+                    path="/proveedores/nuevo"
+                    element={
+                        <NewSupplierPage />
+                    }
+                />
+
+            <Route
+                path="/proveedores/:supplierId"
+                element={
+                    <SupplierDetailPage />
+                }
+            />
             </Route>
 
             {/* CUALQUIER OTRA RUTA */}
 
             <Route
                 path="*"
-                element={<HomeRedirect />}
+                element={
+                    <HomeRedirect />
+                }
             />
 
         </Routes>

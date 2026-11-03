@@ -209,8 +209,8 @@ function CustomersPage() {
             type: string,
         ) => {
             switch (type) {
-                case 'PERSON':
-                    return 'Persona'
+                case 'NATURAL_PERSON':
+                    return 'Persona natural'
 
                 case 'INDIVIDUAL':
                     return 'Persona natural'
