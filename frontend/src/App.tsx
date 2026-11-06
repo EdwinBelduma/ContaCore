@@ -14,6 +14,7 @@ import CustomerDetailPage from './pages/CustomerDetailPage'
 import CustomersPage from './pages/CustomersPage'
 import DashboardPage from './pages/DashboardPage'
 import EditCustomerPage from './pages/EditCustomerPage'
+import EditSupplierPage from './pages/EditSupplierPage'
 import ExpensesPage from './pages/ExpensesPage'
 import IncomesPage from './pages/IncomesPage'
 import LoginPage from './pages/LoginPage'
@@ -21,8 +22,8 @@ import NewCustomerPage from './pages/NewCustomerPage'
 import NewExpensePage from './pages/NewExpensePage'
 import NewIncomePage from './pages/NewIncomePage'
 import NewSupplierPage from './pages/NewSupplierPage'
-import SuppliersPage from './pages/SuppliersPage'
 import SupplierDetailPage from './pages/SupplierDetailPage'
+import SuppliersPage from './pages/SuppliersPage'
 
 function ProtectedRoute({
                             children,
@@ -86,7 +87,7 @@ function App() {
                 }
             />
 
-            {/* PÁGINAS PROTEGIDAS */}
+            {/* ÁREA PROTEGIDA */}
 
             <Route
                 element={
@@ -99,7 +100,7 @@ function App() {
                 {/* DASHBOARD */}
 
                 <Route
-                    path="/dashboard"
+                    path="dashboard"
                     element={
                         <DashboardPage />
                     }
@@ -108,14 +109,14 @@ function App() {
                 {/* INGRESOS */}
 
                 <Route
-                    path="/ingresos"
+                    path="ingresos"
                     element={
                         <IncomesPage />
                     }
                 />
 
                 <Route
-                    path="/ingresos/nuevo"
+                    path="ingresos/nuevo"
                     element={
                         <NewIncomePage />
                     }
@@ -124,74 +125,86 @@ function App() {
                 {/* GASTOS */}
 
                 <Route
-                    path="/gastos"
+                    path="gastos"
                     element={
                         <ExpensesPage />
                     }
                 />
 
                 <Route
-                    path="/gastos/nuevo"
+                    path="gastos/nuevo"
                     element={
                         <NewExpensePage />
                     }
                 />
 
-                {/* CLIENTES */}
+                {/* =========================
+            CLIENTES
+        ========================= */}
 
                 <Route
-                    path="/clientes"
+                    path="clientes"
                     element={
                         <CustomersPage />
                     }
                 />
 
                 <Route
-                    path="/clientes/nuevo"
+                    path="clientes/nuevo"
                     element={
                         <NewCustomerPage />
                     }
                 />
 
                 <Route
-                    path="/clientes/:customerId"
-                    element={
-                        <CustomerDetailPage />
-                    }
-                />
-
-                <Route
-                    path="/clientes/:customerId/editar"
+                    path="clientes/:customerId/editar"
                     element={
                         <EditCustomerPage />
                     }
                 />
 
-                {/* PROVEEDORES */}
+                <Route
+                    path="clientes/:customerId"
+                    element={
+                        <CustomerDetailPage />
+                    }
+                />
+
+                {/* =========================
+            PROVEEDORES
+        ========================= */}
 
                 <Route
-                    path="/proveedores"
+                    path="proveedores"
                     element={
                         <SuppliersPage />
                     }
                 />
 
                 <Route
-                    path="/proveedores/nuevo"
+                    path="proveedores/nuevo"
                     element={
                         <NewSupplierPage />
                     }
                 />
 
-            <Route
-                path="/proveedores/:supplierId"
-                element={
-                    <SupplierDetailPage />
-                }
-            />
+                <Route
+                    path="proveedores/:supplierId/editar"
+                    element={
+                        <EditSupplierPage />
+                    }
+                />
+
+                <Route
+                    path="proveedores/:supplierId"
+                    element={
+                        <SupplierDetailPage />
+                    }
+                />
+
             </Route>
 
-            {/* CUALQUIER OTRA RUTA */}
+            {/* RUTA DESCONOCIDA */}
 
             <Route
                 path="*"

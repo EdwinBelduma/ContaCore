@@ -4,6 +4,7 @@ import {
     FileText,
     Mail,
     MapPin,
+    Pencil,
     Phone,
     UserRound,
 } from 'lucide-react'
@@ -64,6 +65,10 @@ function SupplierDetailPage() {
         setError,
     ] =
         useState('')
+
+    /*
+     * CARGAR PROVEEDOR
+     */
 
     useEffect(() => {
         const loadSupplier =
@@ -146,6 +151,10 @@ function SupplierDetailPage() {
         loadSupplier()
     }, [supplierId])
 
+    /*
+     * TIPO DE PROVEEDOR
+     */
+
     const getSupplierTypeLabel =
         (
             type: string,
@@ -161,6 +170,10 @@ function SupplierDetailPage() {
                     return type
             }
         }
+
+    /*
+     * CARGANDO
+     */
 
     if (loading) {
         return (
@@ -207,23 +220,49 @@ function SupplierDetailPage() {
 
                 </div>
 
-                <button
-                    type="button"
-                    onClick={() =>
-                        navigate(
-                            '/proveedores',
-                        )
-                    }
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:border-slate-600 hover:bg-slate-800/50 hover:text-white"
-                >
+                {/* BOTONES */}
 
-                    <ArrowLeft
-                        size={17}
-                    />
+                <div className="flex flex-col gap-3 sm:flex-row">
 
-                    Volver a Proveedores
+                    {supplier && (
+                        <button
+                            type="button"
+                            onClick={() =>
+                                navigate(
+                                    `/proveedores/${supplier.id}/editar`,
+                                )
+                            }
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-violet-500"
+                        >
 
-                </button>
+                            <Pencil
+                                size={17}
+                            />
+
+                            Editar proveedor
+
+                        </button>
+                    )}
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            navigate(
+                                '/proveedores',
+                            )
+                        }
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-300 transition hover:border-slate-600 hover:bg-slate-800/50 hover:text-white"
+                    >
+
+                        <ArrowLeft
+                            size={17}
+                        />
+
+                        Volver a Proveedores
+
+                    </button>
+
+                </div>
 
             </div>
 
@@ -452,6 +491,30 @@ function SupplierDetailPage() {
                     Inactivo
                   </span>
                                 )}
+
+                            </div>
+
+                            {/* ACCIÓN */}
+
+                            <div className="mt-8 border-t border-slate-800 pt-6">
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        navigate(
+                                            `/proveedores/${supplier.id}/editar`,
+                                        )
+                                    }
+                                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-violet-500"
+                                >
+
+                                    <Pencil
+                                        size={17}
+                                    />
+
+                                    Editar proveedor
+
+                                </button>
 
                             </div>
 
