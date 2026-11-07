@@ -21,7 +21,10 @@ import LoginPage from './pages/LoginPage'
 import NewCustomerPage from './pages/NewCustomerPage'
 import NewExpensePage from './pages/NewExpensePage'
 import NewIncomePage from './pages/NewIncomePage'
+import NewReceivablePage from './pages/NewReceivablePage'
 import NewSupplierPage from './pages/NewSupplierPage'
+import ReceivableDetailPage from './pages/ReceivableDetailPage'
+import ReceivablesPage from './pages/ReceivablesPage'
 import SupplierDetailPage from './pages/SupplierDetailPage'
 import SuppliersPage from './pages/SuppliersPage'
 
@@ -97,7 +100,9 @@ function App() {
                 }
             >
 
-                {/* DASHBOARD */}
+                {/* =========================
+            DASHBOARD
+        ========================= */}
 
                 <Route
                     path="dashboard"
@@ -106,7 +111,9 @@ function App() {
                     }
                 />
 
-                {/* INGRESOS */}
+                {/* =========================
+            INGRESOS
+        ========================= */}
 
                 <Route
                     path="ingresos"
@@ -122,7 +129,9 @@ function App() {
                     }
                 />
 
-                {/* GASTOS */}
+                {/* =========================
+            GASTOS
+        ========================= */}
 
                 <Route
                     path="gastos"
@@ -202,9 +211,36 @@ function App() {
                     }
                 />
 
+                {/* =========================
+            CUENTAS POR COBRAR
+        ========================= */}
+
+                <Route
+                    path="cuentas-por-cobrar"
+                    element={
+                        <ReceivablesPage />
+                    }
+                />
+
+                <Route
+                    path="cuentas-por-cobrar/nueva"
+                    element={
+                        <NewReceivablePage />
+                    }
+                />
+
+                <Route
+                    path="cuentas-por-cobrar/:obligationId"
+                    element={
+                        <ReceivableDetailPage />
+                    }
+                />
+
             </Route>
 
-            {/* RUTA DESCONOCIDA */}
+            {/* =========================
+          RUTA DESCONOCIDA
+      ========================= */}
 
             <Route
                 path="*"
