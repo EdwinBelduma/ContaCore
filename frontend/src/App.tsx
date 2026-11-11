@@ -1,7 +1,4 @@
-import type {
-    ReactNode,
-} from 'react'
-
+import type { ReactNode } from 'react'
 import {
     Navigate,
     Route,
@@ -17,14 +14,26 @@ import EditCustomerPage from './pages/EditCustomerPage'
 import EditSupplierPage from './pages/EditSupplierPage'
 import ExpensesPage from './pages/ExpensesPage'
 import IncomesPage from './pages/IncomesPage'
+
+import JournalEntriesPage from './pages/JournalEntriesPage'
+import JournalEntryDetailPage from './pages/JournalEntryDetailPage'
+import NewJournalEntryPage from './pages/NewJournalEntryPage'
+
 import LoginPage from './pages/LoginPage'
+
 import NewCustomerPage from './pages/NewCustomerPage'
 import NewExpensePage from './pages/NewExpensePage'
 import NewIncomePage from './pages/NewIncomePage'
+import NewPayablePage from './pages/NewPayablePage'
 import NewReceivablePage from './pages/NewReceivablePage'
 import NewSupplierPage from './pages/NewSupplierPage'
+
+import PayableDetailPage from './pages/PayableDetailPage'
+import PayablesPage from './pages/PayablesPage'
+
 import ReceivableDetailPage from './pages/ReceivableDetailPage'
 import ReceivablesPage from './pages/ReceivablesPage'
+
 import SupplierDetailPage from './pages/SupplierDetailPage'
 import SuppliersPage from './pages/SuppliersPage'
 
@@ -71,17 +80,12 @@ function HomeRedirect() {
 function App() {
     return (
         <Routes>
-
-            {/* INICIO */}
-
             <Route
                 path="/"
                 element={
                     <HomeRedirect />
                 }
             />
-
-            {/* LOGIN */}
 
             <Route
                 path="/login"
@@ -90,8 +94,6 @@ function App() {
                 }
             />
 
-            {/* ÁREA PROTEGIDA */}
-
             <Route
                 element={
                     <ProtectedRoute>
@@ -99,21 +101,12 @@ function App() {
                     </ProtectedRoute>
                 }
             >
-
-                {/* =========================
-            DASHBOARD
-        ========================= */}
-
                 <Route
                     path="dashboard"
                     element={
                         <DashboardPage />
                     }
                 />
-
-                {/* =========================
-            INGRESOS
-        ========================= */}
 
                 <Route
                     path="ingresos"
@@ -129,10 +122,6 @@ function App() {
                     }
                 />
 
-                {/* =========================
-            GASTOS
-        ========================= */}
-
                 <Route
                     path="gastos"
                     element={
@@ -146,10 +135,6 @@ function App() {
                         <NewExpensePage />
                     }
                 />
-
-                {/* =========================
-            CLIENTES
-        ========================= */}
 
                 <Route
                     path="clientes"
@@ -179,10 +164,6 @@ function App() {
                     }
                 />
 
-                {/* =========================
-            PROVEEDORES
-        ========================= */}
-
                 <Route
                     path="proveedores"
                     element={
@@ -211,10 +192,6 @@ function App() {
                     }
                 />
 
-                {/* =========================
-            CUENTAS POR COBRAR
-        ========================= */}
-
                 <Route
                     path="cuentas-por-cobrar"
                     element={
@@ -236,11 +213,50 @@ function App() {
                     }
                 />
 
-            </Route>
+                <Route
+                    path="cuentas-por-pagar"
+                    element={
+                        <PayablesPage />
+                    }
+                />
 
-            {/* =========================
-          RUTA DESCONOCIDA
-      ========================= */}
+                <Route
+                    path="cuentas-por-pagar/nueva"
+                    element={
+                        <NewPayablePage />
+                    }
+                />
+
+                <Route
+                    path="cuentas-por-pagar/:obligationId"
+                    element={
+                        <PayableDetailPage />
+                    }
+                />
+
+                {/* ASIENTOS CONTABLES */}
+
+                <Route
+                    path="asientos"
+                    element={
+                        <JournalEntriesPage />
+                    }
+                />
+
+                <Route
+                    path="asientos/nuevo"
+                    element={
+                        <NewJournalEntryPage />
+                    }
+                />
+
+                <Route
+                    path="asientos/:journalEntryId"
+                    element={
+                        <JournalEntryDetailPage />
+                    }
+                />
+            </Route>
 
             <Route
                 path="*"
@@ -248,7 +264,6 @@ function App() {
                     <HomeRedirect />
                 }
             />
-
         </Routes>
     )
 }
