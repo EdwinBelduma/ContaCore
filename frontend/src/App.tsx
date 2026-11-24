@@ -34,6 +34,8 @@ import PayablesPage from './pages/PayablesPage'
 import ReceivableDetailPage from './pages/ReceivableDetailPage'
 import ReceivablesPage from './pages/ReceivablesPage'
 
+import ReportsPage from './pages/ReportsPage'
+
 import SupplierDetailPage from './pages/SupplierDetailPage'
 import SuppliersPage from './pages/SuppliersPage'
 
@@ -254,6 +256,15 @@ function App() {
                     path="asientos/:journalEntryId"
                     element={
                         <JournalEntryDetailPage />
+                    }
+                />
+
+                {/* REPORTES */}
+
+                <Route
+                    path="reportes"
+                    element={
+                        <ReportsPage />
                     }
                 />
             </Route>

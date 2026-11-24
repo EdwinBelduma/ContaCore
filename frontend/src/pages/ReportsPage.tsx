@@ -2,11 +2,14 @@ import {
     BookOpenText,
     CalendarDays,
     CheckCircle2,
+    Download,
     FileBarChart,
     Landmark,
     LoaderCircle,
     Search,
     Scale,
+    TrendingUp,
+    Building2,
 } from 'lucide-react'
 
 import {
@@ -26,18 +29,34 @@ import {
 } from '../services/accountService'
 
 import {
+    getBalanceSheetReport,
+    getIncomeStatementReport,
     getJournalReport,
     getLedgerReport,
     getTrialBalanceReport,
+    type BalanceSheetAccount,
+    type BalanceSheetReportResponse,
+    type IncomeStatementAccount,
+    type IncomeStatementReportResponse,
     type JournalReportResponse,
     type LedgerReportResponse,
     type TrialBalanceReportResponse,
 } from '../services/reportService'
 
+import {
+    exportBalanceSheetPdf,
+    exportIncomeStatementPdf,
+    exportJournalReportPdf,
+    exportLedgerReportPdf,
+    exportTrialBalancePdf,
+} from '../services/reportPdfService'
+
 type ReportType =
     | 'JOURNAL'
     | 'LEDGER'
     | 'TRIAL_BALANCE'
+    | 'INCOME_STATEMENT'
+    | 'BALANCE_SHEET'
 
 function getMonthStart() {
     const now = new Date()
@@ -138,6 +157,22 @@ function ReportsPage() {
             null,
         )
 
+    const [
+        incomeStatementReport,
+        setIncomeStatementReport,
+    ] =
+        useState<IncomeStatementReportResponse | null>(
+            null,
+        )
+
+    const [
+        balanceSheetReport,
+        setBalanceSheetReport,
+    ] =
+        useState<BalanceSheetReportResponse | null>(
+            null,
+        )
+
     const [loading, setLoading] =
         useState(true)
 
@@ -164,8 +199,8 @@ function ReportsPage() {
                     await getAccountingEntities()
 
                 if (
-                    entities.length ===
-                    0
+                    !entities ||
+                    entities.length === 0
                 ) {
                     setError(
                         'No existe una entidad contable disponible.',
@@ -245,7 +280,7 @@ function ReportsPage() {
     ========================================================= */
 
     const formatCurrency = (
-        value: number,
+        value?: number | null,
     ) =>
         new Intl.NumberFormat(
             'en-US',
@@ -260,7 +295,7 @@ function ReportsPage() {
         )
 
     const formatDate = (
-        value: string,
+        value?: string | null,
     ) => {
         if (!value) {
             return '-'
@@ -281,6 +316,312 @@ function ReportsPage() {
     }
 
     /* =========================================================
+       AYUDAS ESTADO DE RESULTADOS
+    ========================================================= */
+
+    const getIncomeStatementAmount = (
+        account: IncomeStatementAccount,
+    ) => {
+        if (
+            account.balance !==
+            undefined
+        ) {
+            return Number(
+                account.balance,
+            )
+        }
+
+        if (
+            account.amount !==
+            undefined
+        ) {
+            return Number(
+                account.amount,
+            )
+        }
+
+        if (
+            account.total !==
+            undefined
+        ) {
+            return Number(
+                account.total,
+            )
+        }
+
+        const debit =
+            Number(
+                account.totalDebit ??
+                0,
+            )
+
+        const credit =
+            Number(
+                account.totalCredit ??
+                0,
+            )
+
+        if (
+            account.type ===
+            'INCOME'
+        ) {
+            return Math.abs(
+                credit - debit,
+            )
+        }
+
+        return Math.abs(
+            debit - credit,
+        )
+    }
+
+    const incomeStatementAccounts =
+        incomeStatementReport?.accounts ??
+        []
+
+    const incomeAccounts =
+        incomeStatementReport?.incomeAccounts ??
+        incomeStatementReport?.incomes ??
+        incomeStatementAccounts.filter(
+            (account) =>
+                account.type ===
+                'INCOME',
+        )
+
+    const expenseAccounts =
+        incomeStatementReport?.expenseAccounts ??
+        incomeStatementReport?.expenses ??
+        incomeStatementAccounts.filter(
+            (account) =>
+                account.type ===
+                'EXPENSE',
+        )
+
+    const calculatedTotalIncome =
+        incomeAccounts.reduce(
+            (
+                total,
+                account,
+            ) =>
+                total +
+                getIncomeStatementAmount(
+                    account,
+                ),
+            0,
+        )
+
+    const calculatedTotalExpenses =
+        expenseAccounts.reduce(
+            (
+                total,
+                account,
+            ) =>
+                total +
+                getIncomeStatementAmount(
+                    account,
+                ),
+            0,
+        )
+
+    const totalIncome =
+        incomeStatementReport?.totalIncome ??
+        incomeStatementReport?.totalIncomes ??
+        calculatedTotalIncome
+
+    const totalExpenses =
+        incomeStatementReport?.totalExpenses ??
+        incomeStatementReport?.totalExpense ??
+        calculatedTotalExpenses
+
+    const netResult =
+        incomeStatementReport?.netIncome ??
+        incomeStatementReport?.netResult ??
+        incomeStatementReport?.result ??
+        totalIncome -
+        totalExpenses
+
+    /* =========================================================
+       AYUDAS BALANCE GENERAL
+    ========================================================= */
+
+    const getBalanceSheetAmount = (
+        account: BalanceSheetAccount,
+    ) => {
+        if (
+            account.balance !==
+            undefined
+        ) {
+            return Number(
+                account.balance,
+            )
+        }
+
+        if (
+            account.amount !==
+            undefined
+        ) {
+            return Number(
+                account.amount,
+            )
+        }
+
+        if (
+            account.total !==
+            undefined
+        ) {
+            return Number(
+                account.total,
+            )
+        }
+
+        const debit =
+            Number(
+                account.totalDebit ??
+                0,
+            )
+
+        const credit =
+            Number(
+                account.totalCredit ??
+                0,
+            )
+
+        if (
+            account.type ===
+            'ASSET'
+        ) {
+            return Math.abs(
+                debit - credit,
+            )
+        }
+
+        return Math.abs(
+            credit - debit,
+        )
+    }
+
+    const balanceAccounts =
+        balanceSheetReport?.accounts ??
+        []
+
+    const assetAccounts =
+        balanceSheetReport?.assetAccounts ??
+        balanceSheetReport?.assets ??
+        balanceAccounts.filter(
+            (account) =>
+                account.type ===
+                'ASSET',
+        )
+
+    const liabilityAccounts =
+        balanceSheetReport?.liabilityAccounts ??
+        balanceSheetReport?.liabilities ??
+        balanceAccounts.filter(
+            (account) =>
+                account.type ===
+                'LIABILITY',
+        )
+
+    const equityAccounts =
+        balanceSheetReport?.equityAccounts ??
+        balanceSheetReport?.equity ??
+        balanceAccounts.filter(
+            (account) =>
+                account.type ===
+                'EQUITY',
+        )
+
+    const calculatedAssets =
+        assetAccounts.reduce(
+            (
+                total,
+                account,
+            ) =>
+                total +
+                getBalanceSheetAmount(
+                    account,
+                ),
+            0,
+        )
+
+    const calculatedLiabilities =
+        liabilityAccounts.reduce(
+            (
+                total,
+                account,
+            ) =>
+                total +
+                getBalanceSheetAmount(
+                    account,
+                ),
+            0,
+        )
+
+    const calculatedEquity =
+        equityAccounts.reduce(
+            (
+                total,
+                account,
+            ) =>
+                total +
+                getBalanceSheetAmount(
+                    account,
+                ),
+            0,
+        )
+
+    const totalAssets =
+        balanceSheetReport?.totalAssets ??
+        calculatedAssets
+
+    const totalLiabilities =
+        balanceSheetReport?.totalLiabilities ??
+        calculatedLiabilities
+
+    const totalEquity =
+        balanceSheetReport?.totalEquity ??
+        calculatedEquity
+
+    const totalLiabilitiesAndEquity =
+        balanceSheetReport
+            ?.totalLiabilitiesAndEquity ??
+        totalLiabilities +
+        totalEquity
+
+    const balanceSheetBalanced =
+        balanceSheetReport?.balanced ??
+        Math.abs(
+            totalAssets -
+            totalLiabilitiesAndEquity,
+        ) < 0.01
+
+    /* =========================================================
+       LIMPIAR REPORTES
+    ========================================================= */
+
+    const clearReports = () => {
+        setJournalReport(
+            null,
+        )
+
+        setLedgerReport(
+            null,
+        )
+
+        setTrialBalanceReport(
+            null,
+        )
+
+        setIncomeStatementReport(
+            null,
+        )
+
+        setBalanceSheetReport(
+            null,
+        )
+    }
+
+    /* =========================================================
        CONSULTAR REPORTE
     ========================================================= */
 
@@ -293,21 +634,36 @@ function ReportsPage() {
                 return
             }
 
-            if (!from || !to) {
-                setError(
-                    'Selecciona la fecha inicial y la fecha final.',
-                )
-                return
-            }
-
             if (
-                new Date(from) >
-                new Date(to)
+                reportType ===
+                'BALANCE_SHEET'
             ) {
-                setError(
-                    'La fecha inicial no puede ser posterior a la fecha final.',
-                )
-                return
+                if (!to) {
+                    setError(
+                        'Selecciona la fecha del Balance General.',
+                    )
+                    return
+                }
+            } else {
+                if (
+                    !from ||
+                    !to
+                ) {
+                    setError(
+                        'Selecciona la fecha inicial y la fecha final.',
+                    )
+                    return
+                }
+
+                if (
+                    new Date(from) >
+                    new Date(to)
+                ) {
+                    setError(
+                        'La fecha inicial no puede ser posterior a la fecha final.',
+                    )
+                    return
+                }
             }
 
             if (
@@ -328,17 +684,7 @@ function ReportsPage() {
 
                 setError('')
 
-                setJournalReport(
-                    null,
-                )
-
-                setLedgerReport(
-                    null,
-                )
-
-                setTrialBalanceReport(
-                    null,
-                )
+                clearReports()
 
                 if (
                     reportType ===
@@ -377,14 +723,49 @@ function ReportsPage() {
                     return
                 }
 
+                if (
+                    reportType ===
+                    'TRIAL_BALANCE'
+                ) {
+                    const result =
+                        await getTrialBalanceReport(
+                            entity.id,
+                            from,
+                            to,
+                        )
+
+                    setTrialBalanceReport(
+                        result,
+                    )
+
+                    return
+                }
+
+                if (
+                    reportType ===
+                    'INCOME_STATEMENT'
+                ) {
+                    const result =
+                        await getIncomeStatementReport(
+                            entity.id,
+                            from,
+                            to,
+                        )
+
+                    setIncomeStatementReport(
+                        result,
+                    )
+
+                    return
+                }
+
                 const result =
-                    await getTrialBalanceReport(
+                    await getBalanceSheetReport(
                         entity.id,
-                        from,
                         to,
                     )
 
-                setTrialBalanceReport(
+                setBalanceSheetReport(
                     result,
                 )
             } catch (
@@ -404,6 +785,69 @@ function ReportsPage() {
                 )
             }
         }
+
+    const handleExportPdf = () => {
+        try {
+            setError('')
+
+            if (journalReport) {
+                exportJournalReportPdf(
+                    journalReport,
+                )
+                return
+            }
+
+            if (ledgerReport) {
+                exportLedgerReportPdf(
+                    ledgerReport,
+                )
+                return
+            }
+
+            if (trialBalanceReport) {
+                exportTrialBalancePdf(
+                    trialBalanceReport,
+                )
+                return
+            }
+
+            if (incomeStatementReport) {
+                exportIncomeStatementPdf(
+                    incomeStatementReport,
+                )
+                return
+            }
+
+            if (balanceSheetReport) {
+                exportBalanceSheetPdf(
+                    balanceSheetReport,
+                )
+                return
+            }
+
+            setError(
+                'Primero genera un reporte antes de exportarlo.',
+            )
+        } catch (exception) {
+            console.error(
+                'Error exportando PDF:',
+                exception,
+            )
+
+            setError(
+                'No fue posible generar el archivo PDF.',
+            )
+        }
+    }
+
+    const hasGeneratedReport =
+        Boolean(
+            journalReport ||
+            ledgerReport ||
+            trialBalanceReport ||
+            incomeStatementReport ||
+            balanceSheetReport,
+        )
 
     /* =========================================================
        LOADING
@@ -426,10 +870,6 @@ function ReportsPage() {
         )
     }
 
-    /* =========================================================
-       PANTALLA
-    ========================================================= */
-
     return (
         <section className="px-6 py-7 xl:px-8">
             {/* CABECERA */}
@@ -444,7 +884,7 @@ function ReportsPage() {
                 </h2>
 
                 <p className="mt-2 text-sm text-slate-400">
-                    Consulta el Libro Diario, Libro Mayor y Balanza de Comprobación de{' '}
+                    Consulta los reportes financieros y contables de{' '}
                     {entity?.displayName ??
                         'tu entidad contable'}.
                 </p>
@@ -456,9 +896,9 @@ function ReportsPage() {
                 </div>
             )}
 
-            {/* TIPOS DE REPORTE */}
+            {/* TIPOS DE REPORTES */}
 
-            <div className="mt-7 grid gap-4 md:grid-cols-3">
+            <div className="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
                 <button
                     type="button"
                     onClick={() =>
@@ -483,7 +923,7 @@ function ReportsPage() {
                     </h3>
 
                     <p className="mt-1 text-sm text-slate-500">
-                        Consulta todos los asientos registrados en un período.
+                        Asientos del período.
                     </p>
                 </button>
 
@@ -511,7 +951,7 @@ function ReportsPage() {
                     </h3>
 
                     <p className="mt-1 text-sm text-slate-500">
-                        Consulta los movimientos y saldo de una cuenta específica.
+                        Movimientos por cuenta.
                     </p>
                 </button>
 
@@ -535,11 +975,67 @@ function ReportsPage() {
                     />
 
                     <h3 className="mt-4 font-bold">
-                        Balanza de Comprobación
+                        Balanza
                     </h3>
 
                     <p className="mt-1 text-sm text-slate-500">
-                        Verifica los movimientos y saldos contables.
+                        Verifica Debe y Haber.
+                    </p>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() =>
+                        setReportType(
+                            'INCOME_STATEMENT',
+                        )
+                    }
+                    className={`rounded-2xl border p-5 text-left transition ${
+                        reportType ===
+                        'INCOME_STATEMENT'
+                            ? 'border-cyan-500/50 bg-cyan-500/10'
+                            : 'border-slate-800 bg-[#071329] hover:border-slate-700'
+                    }`}
+                >
+                    <TrendingUp
+                        size={25}
+                        className="text-cyan-400"
+                    />
+
+                    <h3 className="mt-4 font-bold">
+                        Estado de Resultados
+                    </h3>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                        Ingresos, gastos y resultado.
+                    </p>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() =>
+                        setReportType(
+                            'BALANCE_SHEET',
+                        )
+                    }
+                    className={`rounded-2xl border p-5 text-left transition ${
+                        reportType ===
+                        'BALANCE_SHEET'
+                            ? 'border-amber-500/50 bg-amber-500/10'
+                            : 'border-slate-800 bg-[#071329] hover:border-slate-700'
+                    }`}
+                >
+                    <Building2
+                        size={25}
+                        className="text-amber-400"
+                    />
+
+                    <h3 className="mt-4 font-bold">
+                        Balance General
+                    </h3>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                        Activos, pasivos y patrimonio.
                     </p>
                 </button>
             </div>
@@ -555,39 +1051,51 @@ function ReportsPage() {
 
                     <div>
                         <h3 className="font-bold">
-                            Período del reporte
+                            {reportType ===
+                            'BALANCE_SHEET'
+                                ? 'Fecha del Balance General'
+                                : 'Período del reporte'}
                         </h3>
 
                         <p className="mt-1 text-sm text-slate-500">
-                            Selecciona las fechas que deseas consultar.
+                            {reportType ===
+                            'BALANCE_SHEET'
+                                ? 'Selecciona la fecha de corte.'
+                                : 'Selecciona las fechas que deseas consultar.'}
                         </p>
                     </div>
                 </div>
 
                 <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+                    {reportType !==
+                        'BALANCE_SHEET' && (
+                            <div>
+                                <label className="text-sm font-semibold text-slate-300">
+                                    Desde *
+                                </label>
+
+                                <input
+                                    type="date"
+                                    value={from}
+                                    onChange={(
+                                        event,
+                                    ) =>
+                                        setFrom(
+                                            event.target
+                                                .value,
+                                        )
+                                    }
+                                    className="mt-2 w-full rounded-xl border border-slate-800 bg-[#0a1528] px-4 py-3 text-sm text-white outline-none focus:border-blue-500/50"
+                                />
+                            </div>
+                        )}
+
                     <div>
                         <label className="text-sm font-semibold text-slate-300">
-                            Desde *
-                        </label>
-
-                        <input
-                            type="date"
-                            value={from}
-                            onChange={(
-                                event,
-                            ) =>
-                                setFrom(
-                                    event.target
-                                        .value,
-                                )
-                            }
-                            className="mt-2 w-full rounded-xl border border-slate-800 bg-[#0a1528] px-4 py-3 text-sm text-white outline-none focus:border-blue-500/50"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="text-sm font-semibold text-slate-300">
-                            Hasta *
+                            {reportType ===
+                            'BALANCE_SHEET'
+                                ? 'Fecha de corte *'
+                                : 'Hasta *'}
                         </label>
 
                         <input
@@ -657,7 +1165,7 @@ function ReportsPage() {
                         )}
                 </div>
 
-                <div className="mt-6 flex justify-end">
+                <div className="mt-6 flex flex-wrap justify-end gap-3">
                     <button
                         type="button"
                         onClick={
@@ -683,6 +1191,24 @@ function ReportsPage() {
                             ? 'Consultando...'
                             : 'Generar reporte'}
                     </button>
+
+                    <button
+                        type="button"
+                        onClick={
+                            handleExportPdf
+                        }
+                        disabled={
+                            !hasGeneratedReport ||
+                            loadingReport
+                        }
+                        className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-3 text-sm font-bold text-emerald-300 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        <Download
+                            size={18}
+                        />
+
+                        Exportar PDF
+                    </button>
                 </div>
             </article>
 
@@ -693,175 +1219,128 @@ function ReportsPage() {
             {journalReport && (
                 <article className="mt-7 overflow-hidden rounded-2xl border border-slate-800 bg-[#071329]">
                     <div className="border-b border-slate-800 px-6 py-5">
-                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                            <div>
-                                <h3 className="text-lg font-bold">
-                                    Libro Diario
-                                </h3>
+                        <h3 className="text-lg font-bold">
+                            Libro Diario
+                        </h3>
 
-                                <p className="mt-1 text-sm text-slate-500">
-                                    {formatDate(
-                                        journalReport.from,
-                                    )}{' '}
-                                    -{' '}
-                                    {formatDate(
-                                        journalReport.to,
-                                    )}
-                                </p>
-                            </div>
-
-                            <div className="text-sm text-slate-400">
-                                {
-                                    journalReport.accountingEntityName
-                                }
-                            </div>
-                        </div>
+                        <p className="mt-1 text-sm text-slate-500">
+                            {formatDate(
+                                journalReport.from,
+                            )}{' '}
+                            -{' '}
+                            {formatDate(
+                                journalReport.to,
+                            )}
+                        </p>
                     </div>
 
-                    {journalReport.entries.length ===
-                    0 ? (
-                        <div className="px-6 py-12 text-center text-sm text-slate-500">
-                            No existen movimientos en el período seleccionado.
-                        </div>
-                    ) : (
-                        <div>
-                            {journalReport.entries.map(
-                                (
-                                    entry,
-                                ) => (
-                                    <div
-                                        key={
-                                            entry.id
+                    {journalReport.entries.map(
+                        (entry) => (
+                            <div
+                                key={
+                                    entry.id
+                                }
+                                className="border-b border-slate-800"
+                            >
+                                <div className="bg-slate-900/30 px-6 py-4">
+                                    <p className="font-bold">
+                                        {
+                                            entry.description
                                         }
-                                        className="border-b border-slate-800 last:border-b-0"
-                                    >
-                                        <div className="bg-slate-900/30 px-6 py-4">
-                                            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                                                <div>
-                                                    <p className="font-bold">
-                                                        {
-                                                            entry.description
-                                                        }
-                                                    </p>
+                                    </p>
 
-                                                    <p className="mt-1 text-xs text-slate-500">
-                                                        {formatDate(
-                                                            entry.entryDate,
-                                                        )}
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        {formatDate(
+                                            entry.entryDate,
+                                        )}
 
-                                                        {entry.reference &&
-                                                            ` · ${entry.reference}`}
-                                                    </p>
-                                                </div>
+                                        {entry.reference &&
+                                            ` · ${entry.reference}`}
+                                    </p>
+                                </div>
 
-                                                <div className="text-sm">
-                          <span className="mr-5 text-emerald-300">
-                            Debe:{' '}
-                              {formatCurrency(
-                                  entry.totalDebit,
-                              )}
-                          </span>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full min-w-[700px]">
+                                        <thead>
+                                        <tr className="border-b border-slate-800 text-xs uppercase text-slate-500">
+                                            <th className="px-6 py-3 text-left">
+                                                Cuenta
+                                            </th>
 
-                                                    <span className="text-blue-300">
-                            Haber:{' '}
-                                                        {formatCurrency(
-                                                            entry.totalCredit,
-                                                        )}
-                          </span>
-                                                </div>
-                                            </div>
-                                        </div>
+                                            <th className="px-6 py-3 text-left">
+                                                Descripción
+                                            </th>
 
-                                        <div className="overflow-x-auto">
-                                            <table className="w-full min-w-[700px]">
-                                                <thead>
-                                                <tr className="border-b border-slate-800 text-left text-xs font-bold uppercase text-slate-500">
-                                                    <th className="px-6 py-3">
-                                                        Cuenta
-                                                    </th>
+                                            <th className="px-6 py-3 text-right">
+                                                Debe
+                                            </th>
 
-                                                    <th className="px-6 py-3">
-                                                        Descripción
-                                                    </th>
+                                            <th className="px-6 py-3 text-right">
+                                                Haber
+                                            </th>
+                                        </tr>
+                                        </thead>
 
-                                                    <th className="px-6 py-3 text-right">
-                                                        Debe
-                                                    </th>
+                                        <tbody>
+                                        {entry.lines.map(
+                                            (line) => (
+                                                <tr
+                                                    key={`${entry.id}-${line.lineNumber}`}
+                                                    className="border-b border-slate-800/50"
+                                                >
+                                                    <td className="px-6 py-4">
+                                                        <p className="font-semibold">
+                                                            {
+                                                                line.accountCode
+                                                            }
+                                                        </p>
 
-                                                    <th className="px-6 py-3 text-right">
-                                                        Haber
-                                                    </th>
+                                                        <p className="text-sm text-slate-500">
+                                                            {
+                                                                line.accountName
+                                                            }
+                                                        </p>
+                                                    </td>
+
+                                                    <td className="px-6 py-4 text-sm text-slate-400">
+                                                        {line.description ??
+                                                            '-'}
+                                                    </td>
+
+                                                    <td className="px-6 py-4 text-right text-emerald-300">
+                                                        {line.debit >
+                                                        0
+                                                            ? formatCurrency(
+                                                                line.debit,
+                                                            )
+                                                            : '-'}
+                                                    </td>
+
+                                                    <td className="px-6 py-4 text-right text-blue-300">
+                                                        {line.credit >
+                                                        0
+                                                            ? formatCurrency(
+                                                                line.credit,
+                                                            )
+                                                            : '-'}
+                                                    </td>
                                                 </tr>
-                                                </thead>
-
-                                                <tbody>
-                                                {entry.lines.map(
-                                                    (
-                                                        line,
-                                                    ) => (
-                                                        <tr
-                                                            key={`${entry.id}-${line.lineNumber}`}
-                                                            className="border-b border-slate-800/50 last:border-b-0"
-                                                        >
-                                                            <td className="px-6 py-4">
-                                                                <p className="font-semibold">
-                                                                    {
-                                                                        line.accountCode
-                                                                    }
-                                                                </p>
-
-                                                                <p className="mt-1 text-sm text-slate-500">
-                                                                    {
-                                                                        line.accountName
-                                                                    }
-                                                                </p>
-                                                            </td>
-
-                                                            <td className="px-6 py-4 text-sm text-slate-400">
-                                                                {line.description ??
-                                                                    '-'}
-                                                            </td>
-
-                                                            <td className="px-6 py-4 text-right font-semibold text-emerald-300">
-                                                                {Number(
-                                                                    line.debit,
-                                                                ) >
-                                                                0
-                                                                    ? formatCurrency(
-                                                                        line.debit,
-                                                                    )
-                                                                    : '-'}
-                                                            </td>
-
-                                                            <td className="px-6 py-4 text-right font-semibold text-blue-300">
-                                                                {Number(
-                                                                    line.credit,
-                                                                ) >
-                                                                0
-                                                                    ? formatCurrency(
-                                                                        line.credit,
-                                                                    )
-                                                                    : '-'}
-                                                            </td>
-                                                        </tr>
-                                                    ),
-                                                )}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                ),
-                            )}
-                        </div>
+                                            ),
+                                        )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ),
                     )}
 
-                    <div className="grid gap-4 border-t border-slate-800 bg-slate-900/30 px-6 py-5 md:grid-cols-2">
+                    <div className="grid gap-4 bg-slate-900/30 p-6 md:grid-cols-2">
                         <div>
-                            <p className="text-xs uppercase text-slate-500">
+                            <p className="text-sm text-slate-500">
                                 Total Debe
                             </p>
 
-                            <p className="mt-1 text-xl font-black text-emerald-300">
+                            <p className="text-xl font-black text-emerald-300">
                                 {formatCurrency(
                                     journalReport.totalDebit,
                                 )}
@@ -869,11 +1348,11 @@ function ReportsPage() {
                         </div>
 
                         <div>
-                            <p className="text-xs uppercase text-slate-500">
+                            <p className="text-sm text-slate-500">
                                 Total Haber
                             </p>
 
-                            <p className="mt-1 text-xl font-black text-blue-300">
+                            <p className="text-xl font-black text-blue-300">
                                 {formatCurrency(
                                     journalReport.totalCredit,
                                 )}
@@ -889,7 +1368,7 @@ function ReportsPage() {
 
             {ledgerReport && (
                 <article className="mt-7 overflow-hidden rounded-2xl border border-slate-800 bg-[#071329]">
-                    <div className="border-b border-slate-800 px-6 py-5">
+                    <div className="border-b border-slate-800 p-6">
                         <h3 className="text-lg font-bold">
                             Libro Mayor
                         </h3>
@@ -907,11 +1386,11 @@ function ReportsPage() {
 
                     <div className="grid gap-4 border-b border-slate-800 p-6 md:grid-cols-4">
                         <div>
-                            <p className="text-xs uppercase text-slate-500">
+                            <p className="text-sm text-slate-500">
                                 Saldo inicial
                             </p>
 
-                            <p className="mt-2 text-lg font-bold">
+                            <p className="font-bold">
                                 {formatCurrency(
                                     ledgerReport.openingBalance,
                                 )}
@@ -919,11 +1398,11 @@ function ReportsPage() {
                         </div>
 
                         <div>
-                            <p className="text-xs uppercase text-slate-500">
-                                Total Debe
+                            <p className="text-sm text-slate-500">
+                                Debe
                             </p>
 
-                            <p className="mt-2 text-lg font-bold text-emerald-300">
+                            <p className="font-bold text-emerald-300">
                                 {formatCurrency(
                                     ledgerReport.totalDebit,
                                 )}
@@ -931,11 +1410,11 @@ function ReportsPage() {
                         </div>
 
                         <div>
-                            <p className="text-xs uppercase text-slate-500">
-                                Total Haber
+                            <p className="text-sm text-slate-500">
+                                Haber
                             </p>
 
-                            <p className="mt-2 text-lg font-bold text-blue-300">
+                            <p className="font-bold text-blue-300">
                                 {formatCurrency(
                                     ledgerReport.totalCredit,
                                 )}
@@ -943,11 +1422,11 @@ function ReportsPage() {
                         </div>
 
                         <div>
-                            <p className="text-xs uppercase text-slate-500">
+                            <p className="text-sm text-slate-500">
                                 Saldo final
                             </p>
 
-                            <p className="mt-2 text-lg font-black text-violet-300">
+                            <p className="font-bold text-violet-300">
                                 {formatCurrency(
                                     ledgerReport.closingBalance,
                                 )}
@@ -955,280 +1434,595 @@ function ReportsPage() {
                         </div>
                     </div>
 
-                    {ledgerReport.movements.length ===
-                    0 ? (
-                        <div className="px-6 py-12 text-center text-sm text-slate-500">
-                            No existen movimientos para esta cuenta.
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full min-w-[900px]">
-                                <thead>
-                                <tr className="border-b border-slate-800 text-left text-xs font-bold uppercase text-slate-500">
-                                    <th className="px-6 py-4">
-                                        Fecha
-                                    </th>
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-[850px]">
+                            <thead>
+                            <tr className="border-b border-slate-800 text-xs uppercase text-slate-500">
+                                <th className="px-6 py-4 text-left">
+                                    Fecha
+                                </th>
 
-                                    <th className="px-6 py-4">
-                                        Referencia
-                                    </th>
+                                <th className="px-6 py-4 text-left">
+                                    Descripción
+                                </th>
 
-                                    <th className="px-6 py-4">
-                                        Descripción
-                                    </th>
+                                <th className="px-6 py-4 text-right">
+                                    Debe
+                                </th>
 
-                                    <th className="px-6 py-4 text-right">
-                                        Debe
-                                    </th>
+                                <th className="px-6 py-4 text-right">
+                                    Haber
+                                </th>
 
-                                    <th className="px-6 py-4 text-right">
-                                        Haber
-                                    </th>
+                                <th className="px-6 py-4 text-right">
+                                    Saldo
+                                </th>
+                            </tr>
+                            </thead>
 
-                                    <th className="px-6 py-4 text-right">
-                                        Saldo
-                                    </th>
-                                </tr>
-                                </thead>
+                            <tbody>
+                            {ledgerReport.movements.map(
+                                (
+                                    movement,
+                                    index,
+                                ) => (
+                                    <tr
+                                        key={`${movement.journalEntryId}-${index}`}
+                                        className="border-b border-slate-800/70"
+                                    >
+                                        <td className="px-6 py-4">
+                                            {formatDate(
+                                                movement.entryDate,
+                                            )}
+                                        </td>
 
-                                <tbody>
-                                {ledgerReport.movements.map(
-                                    (
-                                        movement,
-                                        index,
-                                    ) => (
-                                        <tr
-                                            key={`${movement.journalEntryId}-${index}`}
-                                            className="border-b border-slate-800/70 last:border-b-0"
-                                        >
-                                            <td className="px-6 py-5 text-sm text-slate-300">
-                                                {formatDate(
-                                                    movement.entryDate,
-                                                )}
-                                            </td>
+                                        <td className="px-6 py-4">
+                                            {
+                                                movement.description
+                                            }
+                                        </td>
 
-                                            <td className="px-6 py-5 text-sm text-slate-400">
-                                                {movement.reference ??
-                                                    '-'}
-                                            </td>
-
-                                            <td className="px-6 py-5 text-sm">
-                                                {
-                                                    movement.description
-                                                }
-                                            </td>
-
-                                            <td className="px-6 py-5 text-right font-semibold text-emerald-300">
-                                                {Number(
+                                        <td className="px-6 py-4 text-right text-emerald-300">
+                                            {movement.debit >
+                                            0
+                                                ? formatCurrency(
                                                     movement.debit,
-                                                ) >
-                                                0
-                                                    ? formatCurrency(
-                                                        movement.debit,
-                                                    )
-                                                    : '-'}
-                                            </td>
+                                                )
+                                                : '-'}
+                                        </td>
 
-                                            <td className="px-6 py-5 text-right font-semibold text-blue-300">
-                                                {Number(
+                                        <td className="px-6 py-4 text-right text-blue-300">
+                                            {movement.credit >
+                                            0
+                                                ? formatCurrency(
                                                     movement.credit,
-                                                ) >
-                                                0
-                                                    ? formatCurrency(
-                                                        movement.credit,
-                                                    )
-                                                    : '-'}
-                                            </td>
+                                                )
+                                                : '-'}
+                                        </td>
 
-                                            <td className="px-6 py-5 text-right font-bold text-violet-300">
-                                                {formatCurrency(
-                                                    movement.balance,
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ),
-                                )}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                                        <td className="px-6 py-4 text-right font-bold">
+                                            {formatCurrency(
+                                                movement.balance,
+                                            )}
+                                        </td>
+                                    </tr>
+                                ),
+                            )}
+                            </tbody>
+                        </table>
+                    </div>
                 </article>
             )}
 
             {/* =====================================================
-          BALANZA
+          BALANZA DE COMPROBACIÓN
       ====================================================== */}
 
             {trialBalanceReport && (
                 <article className="mt-7 overflow-hidden rounded-2xl border border-slate-800 bg-[#071329]">
-                    <div className="border-b border-slate-800 px-6 py-5">
-                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                            <div>
-                                <h3 className="text-lg font-bold">
-                                    Balanza de Comprobación
-                                </h3>
+                    <div className="flex items-center justify-between border-b border-slate-800 p-6">
+                        <div>
+                            <h3 className="text-lg font-bold">
+                                Balanza de Comprobación
+                            </h3>
 
-                                <p className="mt-1 text-sm text-slate-500">
-                                    {formatDate(
-                                        trialBalanceReport.from,
-                                    )}{' '}
-                                    -{' '}
-                                    {formatDate(
-                                        trialBalanceReport.to,
-                                    )}
-                                </p>
+                            <p className="mt-1 text-sm text-slate-500">
+                                {formatDate(
+                                    trialBalanceReport.from,
+                                )}{' '}
+                                -{' '}
+                                {formatDate(
+                                    trialBalanceReport.to,
+                                )}
+                            </p>
+                        </div>
+
+                        {trialBalanceReport.balanced && (
+                            <span className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-300">
+                <CheckCircle2
+                    size={16}
+                />
+
+                Balanceada
+              </span>
+                        )}
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-[950px]">
+                            <thead>
+                            <tr className="border-b border-slate-800 text-xs uppercase text-slate-500">
+                                <th className="px-6 py-4 text-left">
+                                    Código
+                                </th>
+
+                                <th className="px-6 py-4 text-left">
+                                    Cuenta
+                                </th>
+
+                                <th className="px-6 py-4 text-right">
+                                    Debe
+                                </th>
+
+                                <th className="px-6 py-4 text-right">
+                                    Haber
+                                </th>
+
+                                <th className="px-6 py-4 text-right">
+                                    Saldo Deudor
+                                </th>
+
+                                <th className="px-6 py-4 text-right">
+                                    Saldo Acreedor
+                                </th>
+                            </tr>
+                            </thead>
+
+                            <tbody>
+                            {trialBalanceReport.accounts.map(
+                                (account) => (
+                                    <tr
+                                        key={
+                                            account.accountId
+                                        }
+                                        className="border-b border-slate-800/70"
+                                    >
+                                        <td className="px-6 py-4 text-blue-300">
+                                            {
+                                                account.accountCode
+                                            }
+                                        </td>
+
+                                        <td className="px-6 py-4">
+                                            {
+                                                account.accountName
+                                            }
+                                        </td>
+
+                                        <td className="px-6 py-4 text-right">
+                                            {formatCurrency(
+                                                account.totalDebit,
+                                            )}
+                                        </td>
+
+                                        <td className="px-6 py-4 text-right">
+                                            {formatCurrency(
+                                                account.totalCredit,
+                                            )}
+                                        </td>
+
+                                        <td className="px-6 py-4 text-right">
+                                            {formatCurrency(
+                                                account.debitBalance,
+                                            )}
+                                        </td>
+
+                                        <td className="px-6 py-4 text-right">
+                                            {formatCurrency(
+                                                account.creditBalance,
+                                            )}
+                                        </td>
+                                    </tr>
+                                ),
+                            )}
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+            )}
+
+            {/* =====================================================
+          ESTADO DE RESULTADOS
+      ====================================================== */}
+
+            {incomeStatementReport && (
+                <article className="mt-7 overflow-hidden rounded-2xl border border-slate-800 bg-[#071329]">
+                    <div className="border-b border-slate-800 p-6">
+                        <h3 className="text-xl font-black">
+                            Estado de Resultados
+                        </h3>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                            {formatDate(
+                                incomeStatementReport.from,
+                            )}{' '}
+                            -{' '}
+                            {formatDate(
+                                incomeStatementReport.to,
+                            )}
+                        </p>
+                    </div>
+
+                    <div className="grid gap-6 p-6 lg:grid-cols-2">
+                        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5">
+                            <h4 className="text-lg font-bold text-emerald-300">
+                                Ingresos
+                            </h4>
+
+                            <div className="mt-5 space-y-3">
+                                {incomeAccounts.length ===
+                                0 ? (
+                                    <p className="text-sm text-slate-500">
+                                        No existen ingresos para el período.
+                                    </p>
+                                ) : (
+                                    incomeAccounts.map(
+                                        (
+                                            account,
+                                        ) => (
+                                            <div
+                                                key={
+                                                    account.accountId
+                                                }
+                                                className="flex items-center justify-between border-b border-slate-800/70 pb-3"
+                                            >
+                                                <div>
+                                                    <p className="font-semibold">
+                                                        {
+                                                            account.accountCode
+                                                        }{' '}
+                                                        -{' '}
+                                                        {
+                                                            account.accountName
+                                                        }
+                                                    </p>
+                                                </div>
+
+                                                <span className="font-bold text-emerald-300">
+                          {formatCurrency(
+                              getIncomeStatementAmount(
+                                  account,
+                              ),
+                          )}
+                        </span>
+                                            </div>
+                                        ),
+                                    )
+                                )}
                             </div>
 
-                            {trialBalanceReport.balanced ? (
-                                <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-300">
-                  <CheckCircle2
-                      size={17}
-                  />
+                            <div className="mt-5 flex items-center justify-between border-t border-emerald-500/20 pt-4">
+                <span className="font-bold">
+                  Total ingresos
+                </span>
 
-                  Balanceada
+                                <span className="text-xl font-black text-emerald-300">
+                  {formatCurrency(
+                      totalIncome,
+                  )}
                 </span>
-                            ) : (
-                                <span className="rounded-full border border-rose-400/20 bg-rose-500/10 px-4 py-2 text-sm font-bold text-rose-300">
-                  No balanceada
+                            </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-5">
+                            <h4 className="text-lg font-bold text-rose-300">
+                                Gastos
+                            </h4>
+
+                            <div className="mt-5 space-y-3">
+                                {expenseAccounts.length ===
+                                0 ? (
+                                    <p className="text-sm text-slate-500">
+                                        No existen gastos para el período.
+                                    </p>
+                                ) : (
+                                    expenseAccounts.map(
+                                        (
+                                            account,
+                                        ) => (
+                                            <div
+                                                key={
+                                                    account.accountId
+                                                }
+                                                className="flex items-center justify-between border-b border-slate-800/70 pb-3"
+                                            >
+                                                <p className="font-semibold">
+                                                    {
+                                                        account.accountCode
+                                                    }{' '}
+                                                    -{' '}
+                                                    {
+                                                        account.accountName
+                                                    }
+                                                </p>
+
+                                                <span className="font-bold text-rose-300">
+                          {formatCurrency(
+                              getIncomeStatementAmount(
+                                  account,
+                              ),
+                          )}
+                        </span>
+                                            </div>
+                                        ),
+                                    )
+                                )}
+                            </div>
+
+                            <div className="mt-5 flex items-center justify-between border-t border-rose-500/20 pt-4">
+                <span className="font-bold">
+                  Total gastos
                 </span>
-                            )}
+
+                                <span className="text-xl font-black text-rose-300">
+                  {formatCurrency(
+                      totalExpenses,
+                  )}
+                </span>
+                            </div>
                         </div>
                     </div>
 
-                    {trialBalanceReport.accounts.length ===
-                    0 ? (
-                        <div className="px-6 py-12 text-center text-sm text-slate-500">
-                            No existen cuentas con movimientos en el período.
+                    <div className="border-t border-slate-800 bg-slate-900/30 p-6">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <p className="text-sm text-slate-500">
+                                    Resultado del período
+                                </p>
+
+                                <p className="font-bold">
+                                    {netResult >= 0
+                                        ? 'Utilidad'
+                                        : 'Pérdida'}
+                                </p>
+                            </div>
+
+                            <p
+                                className={`text-3xl font-black ${
+                                    netResult >= 0
+                                        ? 'text-emerald-300'
+                                        : 'text-rose-300'
+                                }`}
+                            >
+                                {formatCurrency(
+                                    netResult,
+                                )}
+                            </p>
                         </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full min-w-[1000px]">
-                                <thead>
-                                <tr className="border-b border-slate-800 text-left text-xs font-bold uppercase text-slate-500">
-                                    <th className="px-6 py-4">
-                                        Código
-                                    </th>
+                    </div>
+                </article>
+            )}
 
-                                    <th className="px-6 py-4">
-                                        Cuenta
-                                    </th>
+            {/* =====================================================
+          BALANCE GENERAL
+      ====================================================== */}
 
-                                    <th className="px-6 py-4">
-                                        Tipo
-                                    </th>
+            {balanceSheetReport && (
+                <article className="mt-7 overflow-hidden rounded-2xl border border-slate-800 bg-[#071329]">
+                    <div className="flex flex-col gap-3 border-b border-slate-800 p-6 md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <h3 className="text-xl font-black">
+                                Balance General
+                            </h3>
 
-                                    <th className="px-6 py-4 text-right">
-                                        Debe
-                                    </th>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Al{' '}
+                                {formatDate(
+                                    balanceSheetReport.asOf ??
+                                    to,
+                                )}
+                            </p>
+                        </div>
 
-                                    <th className="px-6 py-4 text-right">
-                                        Haber
-                                    </th>
+                        <span
+                            className={`rounded-full px-4 py-2 text-sm font-bold ${
+                                balanceSheetBalanced
+                                    ? 'bg-emerald-500/10 text-emerald-300'
+                                    : 'bg-rose-500/10 text-rose-300'
+                            }`}
+                        >
+              {balanceSheetBalanced
+                  ? 'Balanceado'
+                  : 'No balanceado'}
+            </span>
+                    </div>
 
-                                    <th className="px-6 py-4 text-right">
-                                        Saldo Deudor
-                                    </th>
+                    <div className="grid gap-6 p-6 xl:grid-cols-3">
+                        {/* ACTIVOS */}
 
-                                    <th className="px-6 py-4 text-right">
-                                        Saldo Acreedor
-                                    </th>
-                                </tr>
-                                </thead>
+                        <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-5">
+                            <h4 className="text-lg font-bold text-blue-300">
+                                Activos
+                            </h4>
 
-                                <tbody>
-                                {trialBalanceReport.accounts.map(
+                            <div className="mt-5 space-y-3">
+                                {assetAccounts.map(
                                     (
                                         account,
                                     ) => (
-                                        <tr
+                                        <div
                                             key={
                                                 account.accountId
                                             }
-                                            className="border-b border-slate-800/70 last:border-b-0"
+                                            className="flex justify-between border-b border-slate-800 pb-3"
                                         >
-                                            <td className="px-6 py-5 font-semibold text-blue-300">
-                                                {
-                                                    account.accountCode
-                                                }
-                                            </td>
+                      <span>
+                        {
+                            account.accountCode
+                        }{' '}
+                          -{' '}
+                          {
+                              account.accountName
+                          }
+                      </span>
 
-                                            <td className="px-6 py-5">
-                                                {
-                                                    account.accountName
-                                                }
-                                            </td>
-
-                                            <td className="px-6 py-5 text-sm text-slate-400">
-                                                {
-                                                    account.type
-                                                }
-                                            </td>
-
-                                            <td className="px-6 py-5 text-right font-semibold text-emerald-300">
+                                            <strong>
                                                 {formatCurrency(
-                                                    account.totalDebit,
+                                                    getBalanceSheetAmount(
+                                                        account,
+                                                    ),
                                                 )}
-                                            </td>
-
-                                            <td className="px-6 py-5 text-right font-semibold text-blue-300">
-                                                {formatCurrency(
-                                                    account.totalCredit,
-                                                )}
-                                            </td>
-
-                                            <td className="px-6 py-5 text-right">
-                                                {formatCurrency(
-                                                    account.debitBalance,
-                                                )}
-                                            </td>
-
-                                            <td className="px-6 py-5 text-right">
-                                                {formatCurrency(
-                                                    account.creditBalance,
-                                                )}
-                                            </td>
-                                        </tr>
+                                            </strong>
+                                        </div>
                                     ),
                                 )}
-                                </tbody>
+                            </div>
 
-                                <tfoot>
-                                <tr className="border-t border-slate-700 bg-slate-900/40 font-black">
-                                    <td
-                                        colSpan={3}
-                                        className="px-6 py-5 text-right"
-                                    >
-                                        TOTALES
-                                    </td>
+                            <div className="mt-5 flex justify-between border-t border-blue-500/20 pt-4">
+                                <strong>
+                                    Total activos
+                                </strong>
 
-                                    <td className="px-6 py-5 text-right text-emerald-300">
-                                        {formatCurrency(
-                                            trialBalanceReport.totalDebit,
-                                        )}
-                                    </td>
-
-                                    <td className="px-6 py-5 text-right text-blue-300">
-                                        {formatCurrency(
-                                            trialBalanceReport.totalCredit,
-                                        )}
-                                    </td>
-
-                                    <td className="px-6 py-5 text-right">
-                                        {formatCurrency(
-                                            trialBalanceReport.totalDebitBalance,
-                                        )}
-                                    </td>
-
-                                    <td className="px-6 py-5 text-right">
-                                        {formatCurrency(
-                                            trialBalanceReport.totalCreditBalance,
-                                        )}
-                                    </td>
-                                </tr>
-                                </tfoot>
-                            </table>
+                                <strong className="text-blue-300">
+                                    {formatCurrency(
+                                        totalAssets,
+                                    )}
+                                </strong>
+                            </div>
                         </div>
-                    )}
+
+                        {/* PASIVOS */}
+
+                        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
+                            <h4 className="text-lg font-bold text-amber-300">
+                                Pasivos
+                            </h4>
+
+                            <div className="mt-5 space-y-3">
+                                {liabilityAccounts.map(
+                                    (
+                                        account,
+                                    ) => (
+                                        <div
+                                            key={
+                                                account.accountId
+                                            }
+                                            className="flex justify-between border-b border-slate-800 pb-3"
+                                        >
+                      <span>
+                        {
+                            account.accountCode
+                        }{' '}
+                          -{' '}
+                          {
+                              account.accountName
+                          }
+                      </span>
+
+                                            <strong>
+                                                {formatCurrency(
+                                                    getBalanceSheetAmount(
+                                                        account,
+                                                    ),
+                                                )}
+                                            </strong>
+                                        </div>
+                                    ),
+                                )}
+                            </div>
+
+                            <div className="mt-5 flex justify-between border-t border-amber-500/20 pt-4">
+                                <strong>
+                                    Total pasivos
+                                </strong>
+
+                                <strong className="text-amber-300">
+                                    {formatCurrency(
+                                        totalLiabilities,
+                                    )}
+                                </strong>
+                            </div>
+                        </div>
+
+                        {/* PATRIMONIO */}
+
+                        <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5">
+                            <h4 className="text-lg font-bold text-violet-300">
+                                Patrimonio
+                            </h4>
+
+                            <div className="mt-5 space-y-3">
+                                {equityAccounts.map(
+                                    (
+                                        account,
+                                    ) => (
+                                        <div
+                                            key={
+                                                account.accountId
+                                            }
+                                            className="flex justify-between border-b border-slate-800 pb-3"
+                                        >
+                      <span>
+                        {
+                            account.accountCode
+                        }{' '}
+                          -{' '}
+                          {
+                              account.accountName
+                          }
+                      </span>
+
+                                            <strong>
+                                                {formatCurrency(
+                                                    getBalanceSheetAmount(
+                                                        account,
+                                                    ),
+                                                )}
+                                            </strong>
+                                        </div>
+                                    ),
+                                )}
+                            </div>
+
+                            <div className="mt-5 flex justify-between border-t border-violet-500/20 pt-4">
+                                <strong>
+                                    Total patrimonio
+                                </strong>
+
+                                <strong className="text-violet-300">
+                                    {formatCurrency(
+                                        totalEquity,
+                                    )}
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid gap-4 border-t border-slate-800 bg-slate-900/30 p-6 md:grid-cols-2">
+                        <div>
+                            <p className="text-sm text-slate-500">
+                                Total Activos
+                            </p>
+
+                            <p className="mt-1 text-2xl font-black text-blue-300">
+                                {formatCurrency(
+                                    totalAssets,
+                                )}
+                            </p>
+                        </div>
+
+                        <div>
+                            <p className="text-sm text-slate-500">
+                                Pasivos + Patrimonio
+                            </p>
+
+                            <p className="mt-1 text-2xl font-black text-emerald-300">
+                                {formatCurrency(
+                                    totalLiabilitiesAndEquity,
+                                )}
+                            </p>
+                        </div>
+                    </div>
                 </article>
             )}
 
@@ -1237,6 +2031,8 @@ function ReportsPage() {
             {!journalReport &&
                 !ledgerReport &&
                 !trialBalanceReport &&
+                !incomeStatementReport &&
+                !balanceSheetReport &&
                 !loadingReport && (
                     <div className="mt-7 rounded-2xl border border-dashed border-slate-700 bg-[#071329]/40 px-6 py-14 text-center">
                         <FileBarChart
@@ -1249,7 +2045,7 @@ function ReportsPage() {
                         </h3>
 
                         <p className="mt-2 text-sm text-slate-500">
-                            Elige el período y presiona “Generar reporte”.
+                            Elige el reporte, selecciona las fechas y presiona “Generar reporte”.
                         </p>
                     </div>
                 )}

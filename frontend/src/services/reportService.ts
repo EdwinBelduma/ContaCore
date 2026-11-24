@@ -104,6 +104,93 @@ export interface TrialBalanceReportResponse {
 }
 
 /* =========================================================
+   ESTADO DE RESULTADOS
+========================================================= */
+
+export interface IncomeStatementAccount {
+    accountId: string
+    accountCode: string
+    accountName: string
+    type?: string
+
+    amount?: number
+    balance?: number
+    total?: number
+
+    totalDebit?: number
+    totalCredit?: number
+}
+
+export interface IncomeStatementReportResponse {
+    accountingEntityId: string
+    accountingEntityName: string
+
+    from: string
+    to: string
+
+    accounts?: IncomeStatementAccount[]
+
+    incomeAccounts?: IncomeStatementAccount[]
+    expenseAccounts?: IncomeStatementAccount[]
+
+    incomes?: IncomeStatementAccount[]
+    expenses?: IncomeStatementAccount[]
+
+    totalIncome?: number
+    totalIncomes?: number
+
+    totalExpense?: number
+    totalExpenses?: number
+
+    netIncome?: number
+    netResult?: number
+    result?: number
+}
+
+/* =========================================================
+   BALANCE GENERAL
+========================================================= */
+
+export interface BalanceSheetAccount {
+    accountId: string
+    accountCode: string
+    accountName: string
+    type?: string
+
+    amount?: number
+    balance?: number
+    total?: number
+
+    totalDebit?: number
+    totalCredit?: number
+}
+
+export interface BalanceSheetReportResponse {
+    accountingEntityId: string
+    accountingEntityName: string
+
+    asOf: string
+
+    accounts?: BalanceSheetAccount[]
+
+    assetAccounts?: BalanceSheetAccount[]
+    liabilityAccounts?: BalanceSheetAccount[]
+    equityAccounts?: BalanceSheetAccount[]
+
+    assets?: BalanceSheetAccount[]
+    liabilities?: BalanceSheetAccount[]
+    equity?: BalanceSheetAccount[]
+
+    totalAssets?: number
+    totalLiabilities?: number
+    totalEquity?: number
+
+    totalLiabilitiesAndEquity?: number
+
+    balanced?: boolean
+}
+
+/* =========================================================
    PETICIONES
 ========================================================= */
 
@@ -158,6 +245,42 @@ export async function getTrialBalanceReport(
                 params: {
                     from,
                     to,
+                },
+            },
+        )
+
+    return response.data
+}
+
+export async function getIncomeStatementReport(
+    entityId: string,
+    from: string,
+    to: string,
+): Promise<IncomeStatementReportResponse> {
+    const response =
+        await api.get<IncomeStatementReportResponse>(
+            `/accounting-entities/${entityId}/reports/income-statement`,
+            {
+                params: {
+                    from,
+                    to,
+                },
+            },
+        )
+
+    return response.data
+}
+
+export async function getBalanceSheetReport(
+    entityId: string,
+    asOf: string,
+): Promise<BalanceSheetReportResponse> {
+    const response =
+        await api.get<BalanceSheetReportResponse>(
+            `/accounting-entities/${entityId}/reports/balance-sheet`,
+            {
+                params: {
+                    asOf,
                 },
             },
         )
